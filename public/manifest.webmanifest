@@ -1,0 +1,18 @@
+{
+  "name": "Servizio Neve PWA",
+  "short_name": "Neve PWA",
+  "description": "Gestione web progressiva dei servizi neve e dei percorsi operatori.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#eef6ff",
+  "theme_color": "#0f766e",
+  "icons": [
+    {
+      "src": "/pwa-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,29 +1,26 @@
-# Servizio Neve Webapp
+# Servizio Neve PWA
 
-Webapp React + Vite per gestione servizi neve con Firebase Auth, Firestore, Storage e tracciamento GPS tramite Geolocation API del browser.
+Progetto ripartito da zero come **solo PWA web app**. Non contiene più integrazioni native, Firebase, regole Firestore o codice mobile: è una webapp installabile dal browser con dati demo salvati in `localStorage`.
 
-## Struttura
+## Funzioni incluse
 
-- `src/screens`: Login, Dashboard Operatore, Dashboard Tecnico, Mappa Servizio.
-- `src/components`: componenti UI riusabili.
-- `src/services`: autenticazione, progetti, geolocalizzazione browser e metriche.
-- `src/firebase`: configurazione Firebase web SDK e nomi collection.
-- `src/navigation`: router leggero basato sul ruolo utente.
-- `src/store`: sessione utente con Zustand.
+- Dashboard unica responsive per azienda admin, tecnico e operatore.
+- Cambio ruolo demo senza backend.
+- Percorso neve demo assegnato all'operatore.
+- Avvio e fine servizio neve con Geolocation API del browser.
+- Calcolo km, durata e punti GPS raccolti.
+- Storico servizi locale.
+- Pulsante per eliminare tutti i dati locali e ripartire da capo.
+- Manifest PWA e service worker minimale per shell offline.
 
-## Configurazione Firebase
-
-Crea un file `.env.local` con le variabili Vite:
+## Comandi
 
 ```bash
-VITE_FIREBASE_API_KEY=...
-VITE_FIREBASE_AUTH_DOMAIN=...
-VITE_FIREBASE_PROJECT_ID=...
-VITE_FIREBASE_STORAGE_BUCKET=...
-VITE_FIREBASE_MESSAGING_SENDER_ID=...
-VITE_FIREBASE_APP_ID=...
+npm install
+npm run dev
+npm run build
 ```
 
-## Geolocalizzazione web
+## Nota GPS web
 
-La webapp usa `navigator.geolocation.watchPosition`. Per limiti dei browser, il tracking continua in modo affidabile solo finché la pagina resta aperta e autorizzata; non usa foreground service Android né permessi iOS Always, che sono funzionalità native mobile.
+Il tracciamento web usa `navigator.geolocation.watchPosition`: per limiti dei browser funziona in modo affidabile solo con la PWA aperta/autorizzata. Non usa foreground service Android o permessi iOS nativi.

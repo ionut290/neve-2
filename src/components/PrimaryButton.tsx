@@ -1,14 +1,14 @@
 type Props = {
-  title: string;
-  onPress: () => void;
-  variant?: 'primary' | 'danger';
+  children: string;
+  onClick: () => void;
+  variant?: 'primary' | 'secondary' | 'danger';
   disabled?: boolean;
 };
 
-export function PrimaryButton({title, onPress, variant = 'primary', disabled = false}: Props) {
+export function PrimaryButton({children, onClick, variant = 'primary', disabled}: Props) {
   return (
-    <button className={`button button--${variant}`} onClick={onPress} disabled={disabled} type="button">
-      {title}
+    <button className={`button button--${variant}`} disabled={disabled} onClick={onClick} type="button">
+      {children}
     </button>
   );
 }
