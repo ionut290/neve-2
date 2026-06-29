@@ -1,37 +1,51 @@
-import React from 'react';
-import {SafeAreaView, StyleSheet, Text, View} from 'react-native';
 import {PrimaryButton} from '../components/PrimaryButton';
+import {logout} from '../services/authService';
 import {creaProgettoNeve} from '../services/projectService';
 import {useSessionStore} from '../store/sessionStore';
 
-export function TechnicianDashboardScreen() {
+type Props = {onOpenMap: () => void};
+
+export function TechnicianDashboardScreen({onOpenMap}: Props) {
   const user = useSessionStore(state => state.currentUser);
+  const setCurrentUser = useSessionStore(state => state.setCurrentUser);
 
   async function creaDemo() {
     if (!user?.aziendaId || !user.tecnicoId) return;
     await creaProgettoNeve({aziendaId: user.aziendaId, tecnicoId: user.tecnicoId, nome: 'Nuovo progetto neve'});
   }
 
+  async function handleLogout() {
+    await logout();
+    setCurrentUser(undefined);
+  }
+
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Dashboard Tecnico</Text>
-      <View style={styles.card}>
-        <Text style={styles.subtitle}>Gestione progetto neve</Text>
-        <Text>Crea progetto, carica o correggi percorsi GPS, assegna operatori e consulta storico servizi.</Text>
-      </View>
-      <View style={styles.card}>
-        <Text style={styles.subtitle}>Mappa live operatori</Text>
-        <Text>Le posizioni in tempo reale arrivano dalla collection posizioniLive filtrata per aziendaId e tecnicoId.</Text>
-      </View>
-      <PrimaryButton title="CREA PROGETTO NEVE" onPress={creaDemo} />
-      <PrimaryButton title="ESPORTA REPORT" onPress={() => undefined} />
-    </SafeAreaView>
+    <main className="app-shell">
+      <header className="topbar">
+        <div>
+          <p className="eyebrow">Tecnico</p>
+          <h1>Dashboard Tecnico</h1>
+        </div>
+        <button className="link-button" onClick={() => void handleLogout()} type="button">Esci</button>
+      </header>
+
+      <section className="grid three-columns">
+        <article className="panel">
+          <h2>Gestione progetto neve</h2>
+          <p>Crea progetto, carica o correggi percorsi GPS e assegna operatori.</p>
+          <PrimaryButton title="CREA PROGETTO NEVE" onPress={() => void creaDemo()} />
+        </article>
+        <article className="panel">
+          <h2>Mappa live operatori</h2>
+          <p>Le posizioni arrivano da posizioniLive filtrata per aziendaId e tecnicoId.</p>
+          <PrimaryButton title="VEDI MAPPA LIVE" onPress={onOpenMap} />
+        </article>
+        <article className="panel">
+          <h2>Storico e report</h2>
+          <p>Consulta servizi completati ed esporta report operativi.</p>
+          <PrimaryButton title="ESPORTA REPORT" onPress={() => undefined} />
+        </article>
+      </section>
+    </main>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {flex: 1, padding: 20, gap: 14, backgroundColor: '#f8fafc'},
-  title: {fontSize: 28, fontWeight: '800'},
-  subtitle: {fontSize: 18, fontWeight: '700', marginBottom: 8},
-  card: {backgroundColor: '#fff', padding: 16, borderRadius: 12},
-});

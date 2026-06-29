@@ -1,5 +1,4 @@
-import React, {useState} from 'react';
-import {Alert, SafeAreaView, StyleSheet, Text, TextInput} from 'react-native';
+import {useState} from 'react';
 import {PrimaryButton} from '../components/PrimaryButton';
 import {login} from '../services/authService';
 import {useSessionStore} from '../store/sessionStore';
@@ -8,28 +7,35 @@ export function LoginScreen() {
   const setCurrentUser = useSessionStore(state => state.setCurrentUser);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState<string>();
 
-  async function handleLogin() {
+  async function handleLogin(event?: {preventDefault: () => void}) {
+    event?.preventDefault();
     try {
+      setError(undefined);
       const user = await login(email.trim(), password);
       setCurrentUser(user);
-    } catch (error) {
-      Alert.alert('Accesso non riuscito', error instanceof Error ? error.message : 'Errore sconosciuto');
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : 'Errore sconosciuto');
     }
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Servizio Neve</Text>
-      <TextInput autoCapitalize="none" keyboardType="email-address" placeholder="Email" style={styles.input} value={email} onChangeText={setEmail} />
-      <TextInput placeholder="Password" secureTextEntry style={styles.input} value={password} onChangeText={setPassword} />
-      <PrimaryButton title="ACCEDI" onPress={handleLogin} />
-    </SafeAreaView>
+    <main className="auth-page">
+      <form className="panel auth-panel" onSubmit={handleLogin}>
+        <p className="eyebrow">Servizio neve</p>
+        <h1>Accedi alla webapp</h1>
+        <label>
+          Email
+          <input autoComplete="email" type="email" value={email} onChange={(event: any) => setEmail(event.target.value)} />
+        </label>
+        <label>
+          Password
+          <input autoComplete="current-password" type="password" value={password} onChange={(event: any) => setPassword(event.target.value)} />
+        </label>
+        {error && <p className="error">{error}</p>}
+        <PrimaryButton title="ACCEDI" onPress={() => void handleLogin()} />
+      </form>
+    </main>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {flex: 1, justifyContent: 'center', padding: 24, gap: 16, backgroundColor: '#ecfeff'},
-  title: {fontSize: 34, fontWeight: '800', color: '#0f172a', marginBottom: 16},
-  input: {backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#cbd5e1', padding: 14},
-});

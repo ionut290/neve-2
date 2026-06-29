@@ -1,8 +1,4 @@
-import BackgroundGeolocation, {
-  Location,
-  Subscription,
-} from '@transistorsoft/react-native-background-geolocation';
-import firestore from '@react-native-firebase/firestore';
+import {arrayUnion, doc, runTransaction, setDoc} from 'firebase/firestore';
 import {firebaseDb, serverTimestamp} from '../firebase/config';
 import {COLLECTIONS} from '../firebase/collections';
 import {PuntoGps, ServizioNeve} from '../types/domain';
@@ -17,89 +13,83 @@ export type ActiveServiceContext = {
   servizioNeveId: string;
 };
 
-let subscriptions: Subscription[] = [];
+let watchId: number | undefined;
 let currentServiceStartedAt: Date | undefined;
 let currentServicePoints: PuntoGps[] = [];
 
-export async function configureBackgroundGeolocation(context: ActiveServiceContext) {
-  subscriptions.forEach(subscription => subscription.remove());
-  subscriptions = [BackgroundGeolocation.onLocation((location: Location) => saveLocation(context, location))];
-
-  await BackgroundGeolocation.ready({
-    desiredAccuracy: BackgroundGeolocation.DESIRED_ACCURACY_HIGH,
-    distanceFilter: 10,
-    stopOnTerminate: false,
-    startOnBoot: true,
-    enableHeadless: true,
-    foregroundService: true,
-    notification: {
-      title: 'Servizio neve attivo',
-      text: 'GPS in corso',
-      sticky: true,
-      priority: BackgroundGeolocation.NOTIFICATION_PRIORITY_HIGH,
-    },
-    locationAuthorizationRequest: 'Always',
-    backgroundPermissionRationale: {
-      title: 'Consenti posizione sempre',
-      message: 'Serve per tracciare il servizio neve anche con schermo spento.',
-      positiveAction: 'Consenti',
-      negativeAction: 'Annulla',
-    },
-  });
+export function isWebGeolocationAvailable(): boolean {
+  return 'geolocation' in navigator;
 }
 
 export async function startSnowService(context: ActiveServiceContext) {
+  if (!isWebGeolocationAvailable()) {
+    throw new Error('Geolocalizzazione non supportata dal browser');
+  }
+
   currentServiceStartedAt = new Date();
   currentServicePoints = [];
-  await firebaseDb.collection(COLLECTIONS.serviziNeve).doc(context.servizioNeveId).set({
-    ...context,
-    startedAt: currentServiceStartedAt,
-    fotoUrls: [],
-    puntiGps: [],
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  } satisfies Partial<ServizioNeve>, {merge: true});
-  await configureBackgroundGeolocation(context);
-  await BackgroundGeolocation.start();
+  await setDoc(
+    doc(firebaseDb, COLLECTIONS.serviziNeve, context.servizioNeveId),
+    {
+      ...context,
+      startedAt: currentServiceStartedAt,
+      fotoUrls: [],
+      puntiGps: [],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    } satisfies Partial<ServizioNeve>,
+    {merge: true},
+  );
+
+  watchId = navigator.geolocation.watchPosition(
+    position => void savePosition(context, position),
+    error => console.error('Errore geolocalizzazione', error),
+    {enableHighAccuracy: true, maximumAge: 5000, timeout: 15000},
+  );
 }
 
 export async function stopSnowService(context?: ActiveServiceContext, note?: string, fotoUrls: string[] = []) {
-  await BackgroundGeolocation.stop();
-  subscriptions.forEach(subscription => subscription.remove());
-  subscriptions = [];
+  if (watchId !== undefined) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = undefined;
+  }
 
   if (context && currentServiceStartedAt) {
     const endedAt = new Date();
-    await firebaseDb.collection(COLLECTIONS.serviziNeve).doc(context.servizioNeveId).set({
-      endedAt,
-      durataSecondi: calculateDurationSeconds(currentServiceStartedAt, endedAt),
-      kmPercorsi: calculateDistanceKm(currentServicePoints),
-      note,
-      fotoUrls,
-      updatedAt: serverTimestamp(),
-    } satisfies Partial<ServizioNeve>, {merge: true});
+    await setDoc(
+      doc(firebaseDb, COLLECTIONS.serviziNeve, context.servizioNeveId),
+      {
+        endedAt,
+        durataSecondi: calculateDurationSeconds(currentServiceStartedAt, endedAt),
+        kmPercorsi: calculateDistanceKm(currentServicePoints),
+        note,
+        fotoUrls,
+        updatedAt: serverTimestamp(),
+      } satisfies Partial<ServizioNeve>,
+      {merge: true},
+    );
   }
 
   currentServiceStartedAt = undefined;
   currentServicePoints = [];
 }
 
-async function saveLocation(context: ActiveServiceContext, location: Location) {
+async function savePosition(context: ActiveServiceContext, position: GeolocationPosition) {
   const punto: PuntoGps = {
-    latitude: location.coords.latitude,
-    longitude: location.coords.longitude,
-    accuracy: location.coords.accuracy,
-    speed: location.coords.speed,
-    heading: location.coords.heading,
-    recordedAt: new Date(location.timestamp),
+    latitude: position.coords.latitude,
+    longitude: position.coords.longitude,
+    accuracy: position.coords.accuracy,
+    speed: position.coords.speed ?? undefined,
+    heading: position.coords.heading ?? undefined,
+    recordedAt: new Date(position.timestamp),
   };
 
   currentServicePoints.push(punto);
 
-  const liveRef = firebaseDb.collection(COLLECTIONS.posizioniLive).doc(context.operatoreId);
-  const serviceRef = firebaseDb.collection(COLLECTIONS.serviziNeve).doc(context.servizioNeveId);
+  const liveRef = doc(firebaseDb, COLLECTIONS.posizioniLive, context.operatoreId);
+  const serviceRef = doc(firebaseDb, COLLECTIONS.serviziNeve, context.servizioNeveId);
 
-  await firebaseDb.runTransaction(async (transaction: any) => {
+  await runTransaction(firebaseDb, async transaction => {
     transaction.set(
       liveRef,
       {
@@ -117,7 +107,7 @@ async function saveLocation(context: ActiveServiceContext, location: Location) {
       serviceRef,
       {
         ...context,
-        puntiGps: firestore.FieldValue.arrayUnion(punto),
+        puntiGps: arrayUnion(punto),
         updatedAt: serverTimestamp(),
       },
       {merge: true},

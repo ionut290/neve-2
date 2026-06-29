@@ -1,7 +1,7 @@
-import {FirebaseFirestoreTypes} from '@react-native-firebase/firestore';
+import {Timestamp as FirestoreTimestamp} from 'firebase/firestore';
 
 export type UserRole = 'super_admin' | 'azienda_admin' | 'tecnico' | 'operatore';
-export type Timestamp = FirebaseFirestoreTypes.Timestamp | Date;
+export type Timestamp = FirestoreTimestamp | Date;
 
 export interface BaseCompanyDocument {
   aziendaId: string;

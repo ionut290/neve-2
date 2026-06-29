@@ -1,9 +1,10 @@
+import {addDoc, collection, doc, setDoc} from 'firebase/firestore';
 import {firebaseDb, serverTimestamp} from '../firebase/config';
 import {COLLECTIONS} from '../firebase/collections';
 import {Percorso, ProgettoNeve} from '../types/domain';
 
 export async function creaProgettoNeve(input: Pick<ProgettoNeve, 'aziendaId' | 'tecnicoId' | 'nome' | 'descrizione'>) {
-  return firebaseDb.collection(COLLECTIONS.progettiNeve).add({
+  return addDoc(collection(firebaseDb, COLLECTIONS.progettiNeve), {
     ...input,
     operatoreIds: [],
     percorsoIds: [],
@@ -14,7 +15,7 @@ export async function creaProgettoNeve(input: Pick<ProgettoNeve, 'aziendaId' | '
 }
 
 export async function caricaPercorsoGps(input: Omit<Percorso, 'createdAt' | 'updatedAt'>) {
-  return firebaseDb.collection(COLLECTIONS.percorsi).add({
+  return addDoc(collection(firebaseDb, COLLECTIONS.percorsi), {
     ...input,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -22,7 +23,8 @@ export async function caricaPercorsoGps(input: Omit<Percorso, 'createdAt' | 'upd
 }
 
 export async function assegnaOperatori(progettoId: string, operatoreIds: string[]) {
-  await firebaseDb.collection(COLLECTIONS.progettiNeve).doc(progettoId).set(
+  await setDoc(
+    doc(firebaseDb, COLLECTIONS.progettiNeve, progettoId),
     {
       operatoreIds,
       stato: 'assegnato',
