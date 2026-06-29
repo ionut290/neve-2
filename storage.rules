@@ -1,0 +1,9 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /aziende/{aziendaId}/{allPaths=**} {
+      allow read, write: if request.auth != null
+        && firestore.get(/databases/(default)/documents/utenti/$(request.auth.uid)).data.aziendaId == aziendaId;
+    }
+  }
+}
