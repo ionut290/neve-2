@@ -1,5 +1,5 @@
 import {arrayUnion, doc, runTransaction, setDoc} from 'firebase/firestore';
-import {firebaseDb, serverTimestamp} from '../firebase/config';
+import {getFirebaseDb, serverTimestamp} from '../firebase/config';
 import {COLLECTIONS} from '../firebase/collections';
 import {PuntoGps, ServizioNeve} from '../types/domain';
 import {calculateDistanceKm, calculateDurationSeconds} from './metricsService';
@@ -29,7 +29,7 @@ export async function startSnowService(context: ActiveServiceContext) {
   currentServiceStartedAt = new Date();
   currentServicePoints = [];
   await setDoc(
-    doc(firebaseDb, COLLECTIONS.serviziNeve, context.servizioNeveId),
+    doc(getFirebaseDb(), COLLECTIONS.serviziNeve, context.servizioNeveId),
     {
       ...context,
       startedAt: currentServiceStartedAt,
@@ -57,7 +57,7 @@ export async function stopSnowService(context?: ActiveServiceContext, note?: str
   if (context && currentServiceStartedAt) {
     const endedAt = new Date();
     await setDoc(
-      doc(firebaseDb, COLLECTIONS.serviziNeve, context.servizioNeveId),
+      doc(getFirebaseDb(), COLLECTIONS.serviziNeve, context.servizioNeveId),
       {
         endedAt,
         durataSecondi: calculateDurationSeconds(currentServiceStartedAt, endedAt),
@@ -86,10 +86,10 @@ async function savePosition(context: ActiveServiceContext, position: Geolocation
 
   currentServicePoints.push(punto);
 
-  const liveRef = doc(firebaseDb, COLLECTIONS.posizioniLive, context.operatoreId);
-  const serviceRef = doc(firebaseDb, COLLECTIONS.serviziNeve, context.servizioNeveId);
+  const liveRef = doc(getFirebaseDb(), COLLECTIONS.posizioniLive, context.operatoreId);
+  const serviceRef = doc(getFirebaseDb(), COLLECTIONS.serviziNeve, context.servizioNeveId);
 
-  await runTransaction(firebaseDb, async transaction => {
+  await runTransaction(getFirebaseDb(), async transaction => {
     transaction.set(
       liveRef,
       {
