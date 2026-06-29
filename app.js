@@ -1,4 +1,4 @@
-import { auth, isFirebaseConfigured, onAuthStateChanged, ref, storage, uploadBytes, getDownloadURL } from './firebase.js';
+import { auth, onAuthStateChanged, ref, storage, uploadBytes, getDownloadURL } from './firebase.js';
 import { BOOTSTRAP_SUPER_ADMIN_EMAIL, BOOTSTRAP_SUPER_ADMIN_NAME, getUserProfile, login, logout, register, ROLES } from './auth.js';
 import {
   assignOperator,
@@ -56,7 +56,7 @@ function renderAuth() {
         <span class="pill">WebApp / PWA</span>
         <h1>Servizio Neve</h1>
         <p class="muted">Gestione multi azienda per progetti neve, percorsi, operatori e storico servizi con Firebase e Leaflet/OpenStreetMap.</p>
-        ${!isFirebaseConfigured ? '<div class="warning">Modalità demo locale attiva: configura Firebase in firebase.js per usare cloud, Auth, Firestore e Storage reali.</div>' : ''}<div class="warning">Per registrare correttamente il percorso, tieni l'app aperta durante il servizio.</div>
+        <div class="warning">Per registrare correttamente il percorso, tieni l'app aperta durante il servizio.</div>
       </section>
       <section class="card stack">
         <div class="tabs"><button id="showLogin" aria-pressed="true">Login</button><button id="showRegister" class="secondary">Registrazione</button></div>

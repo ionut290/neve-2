@@ -29,7 +29,7 @@ La Geolocation API del browser non è affidabile a schermo spento o con app in b
 
 ## Configurazione Firebase
 
-Aggiorna `firebase.js` sostituendo i placeholder di `firebaseConfig` con i valori del tuo progetto Firebase. Finché restano i placeholder, la WebApp entra in modalità demo locale con `localStorage`, così la registrazione non mostra più errori `auth/api-key-not-valid` durante le prove senza progetto Firebase configurato.
+Aggiorna `firebase.js` sostituendo i placeholder di `firebaseConfig` con i valori del tuo progetto Firebase. Se i valori non sono ancora configurati, l'app usa automaticamente un fallback locale silenzioso con `localStorage` per consentire le prove senza mostrare errori `auth/api-key-not-valid` all'utente.
 
 ## Super admin iniziale
 
