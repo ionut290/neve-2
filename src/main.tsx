@@ -1,5 +1,6 @@
 import React from 'react';
 import {createRoot} from 'react-dom/client';
+import {AppErrorBoundary} from './components/AppErrorBoundary';
 import {RootNavigator} from './navigation/RootNavigator';
 import './styles.css';
 
@@ -11,6 +12,8 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <React.StrictMode>
-    <RootNavigator />
+    <AppErrorBoundary>
+      <RootNavigator />
+    </AppErrorBoundary>
   </React.StrictMode>,
 );

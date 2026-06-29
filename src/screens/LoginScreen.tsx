@@ -1,5 +1,6 @@
 import {useState} from 'react';
 import {PrimaryButton} from '../components/PrimaryButton';
+import {getFirebaseConfigError} from '../firebase/config';
 import {login} from '../services/authService';
 import {useSessionStore} from '../store/sessionStore';
 
@@ -8,9 +9,14 @@ export function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string>();
+  const configError = getFirebaseConfigError();
 
   async function handleLogin(event?: {preventDefault: () => void}) {
     event?.preventDefault();
+    if (configError) {
+      return;
+    }
+
     try {
       setError(undefined);
       const user = await login(email.trim(), password);
@@ -33,8 +39,8 @@ export function LoginScreen() {
           Password
           <input autoComplete="current-password" type="password" value={password} onChange={(event: any) => setPassword(event.target.value)} />
         </label>
-        {error && <p className="error">{error}</p>}
-        <PrimaryButton title="ACCEDI" onPress={() => void handleLogin()} />
+        {(configError || error) && <p className="error">{configError ?? error}</p>}
+        <PrimaryButton title="ACCEDI" onPress={() => void handleLogin()} disabled={Boolean(configError)} />
       </form>
     </main>
   );
