@@ -4,6 +4,7 @@ import {
   db,
   doc,
   getDoc,
+  isFirebaseConfigured,
   serverTimestamp,
   setDoc,
   signInWithEmailAndPassword,
@@ -12,30 +13,61 @@ import {
 } from './firebase.js';
 
 export const ROLES = ['super_admin', 'azienda_admin', 'tecnico', 'operatore'];
+export const BOOTSTRAP_SUPER_ADMIN_EMAIL = 'ionut29019@gmail.com';
+export const BOOTSTRAP_SUPER_ADMIN_NAME = 'Ionel Varga';
+
+function normalizeEmail(email) {
+  return String(email || '').trim().toLowerCase();
+}
+
+function localUsers() {
+  return JSON.parse(localStorage.getItem('servizioNeve.users') || '{}');
+}
+
+function saveLocalUser(profile) {
+  const users = localUsers();
+  users[profile.uid] = profile;
+  localStorage.setItem('servizioNeve.users', JSON.stringify(users));
+}
+
+function buildProfile({ user, email, displayName, role, companyId, codiceTecnico }) {
+  const normalizedEmail = normalizeEmail(email);
+  const isBootstrapSuperAdmin = normalizedEmail === BOOTSTRAP_SUPER_ADMIN_EMAIL;
+  const finalRole = isBootstrapSuperAdmin ? 'super_admin' : role;
+
+  return {
+    uid: user.uid,
+    email: normalizedEmail,
+    displayName: isBootstrapSuperAdmin ? BOOTSTRAP_SUPER_ADMIN_NAME : displayName,
+    role: finalRole,
+    companyId: finalRole === 'super_admin' ? null : companyId,
+    codiceTecnico: finalRole === 'tecnico' ? codiceTecnico : null,
+    linkedTechnicianCode: finalRole === 'operatore' ? codiceTecnico : null,
+    linkedTechnicianId: null,
+    isBootstrapSuperAdmin,
+    createdAt: isFirebaseConfigured ? serverTimestamp() : new Date().toISOString(),
+  };
+}
 
 export async function login(email, password) {
-  const credential = await signInWithEmailAndPassword(auth, email, password);
+  const credential = await signInWithEmailAndPassword(auth, normalizeEmail(email), password);
   return credential.user;
 }
 
 export async function register({ email, password, displayName, role, companyId, codiceTecnico }) {
-  const credential = await createUserWithEmailAndPassword(auth, email, password);
+  const normalizedEmail = normalizeEmail(email);
+  const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
   const user = credential.user;
-  await updateProfile(user, { displayName });
+  const profile = buildProfile({ user, email: normalizedEmail, displayName, role, companyId, codiceTecnico });
 
-  const profile = {
-    uid: user.uid,
-    email,
-    displayName,
-    role,
-    companyId: role === 'super_admin' ? null : companyId,
-    codiceTecnico: role === 'tecnico' ? codiceTecnico : null,
-    linkedTechnicianCode: role === 'operatore' ? codiceTecnico : null,
-    linkedTechnicianId: null,
-    createdAt: serverTimestamp(),
-  };
+  await updateProfile(user, { displayName: profile.displayName });
 
-  await setDoc(doc(db, 'users', user.uid), profile);
+  if (isFirebaseConfigured) {
+    await setDoc(doc(db, 'users', user.uid), profile);
+  } else {
+    saveLocalUser(profile);
+  }
+
   return profile;
 }
 
@@ -44,6 +76,10 @@ export async function logout() {
 }
 
 export async function getUserProfile(uid) {
-  const snapshot = await getDoc(doc(db, 'users', uid));
-  return snapshot.exists() ? snapshot.data() : null;
+  if (isFirebaseConfigured) {
+    const snapshot = await getDoc(doc(db, 'users', uid));
+    return snapshot.exists() ? snapshot.data() : null;
+  }
+
+  return localUsers()[uid] || null;
 }

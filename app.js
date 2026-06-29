@@ -1,5 +1,5 @@
-import { auth, onAuthStateChanged, ref, storage, uploadBytes, getDownloadURL } from './firebase.js';
-import { getUserProfile, login, logout, register, ROLES } from './auth.js';
+import { auth, isFirebaseConfigured, onAuthStateChanged, ref, storage, uploadBytes, getDownloadURL } from './firebase.js';
+import { BOOTSTRAP_SUPER_ADMIN_EMAIL, BOOTSTRAP_SUPER_ADMIN_NAME, getUserProfile, login, logout, register, ROLES } from './auth.js';
 import {
   assignOperator,
   appendGpsPoint,
@@ -56,7 +56,7 @@ function renderAuth() {
         <span class="pill">WebApp / PWA</span>
         <h1>Servizio Neve</h1>
         <p class="muted">Gestione multi azienda per progetti neve, percorsi, operatori e storico servizi con Firebase e Leaflet/OpenStreetMap.</p>
-        <div class="warning">Per registrare correttamente il percorso, tieni l'app aperta durante il servizio.</div>
+        ${!isFirebaseConfigured ? '<div class="warning">Modalità demo locale attiva: configura Firebase in firebase.js per usare cloud, Auth, Firestore e Storage reali.</div>' : ''}<div class="warning">Per registrare correttamente il percorso, tieni l'app aperta durante il servizio.</div>
       </section>
       <section class="card stack">
         <div class="tabs"><button id="showLogin" aria-pressed="true">Login</button><button id="showRegister" class="secondary">Registrazione</button></div>
@@ -78,11 +78,18 @@ function showRegister() {
   document.getElementById('authForm').innerHTML = html`
     <form id="registerForm" class="stack">
       <label>Nome<input name="displayName" required></label><label>Email<input name="email" type="email" required></label><label>Password<input name="password" type="password" minlength="6" required></label>
-      <label>Ruolo<select name="role">${ROLES.map((r) => `<option value="${r}">${roleLabels[r]}</option>`).join('')}</select></label>
+      <label>Ruolo<select name="role" id="roleSelect">${ROLES.map((r) => `<option value="${r}">${roleLabels[r]}</option>`).join('')}</select></label>
+      <p class="muted small" id="superAdminHint">${BOOTSTRAP_SUPER_ADMIN_NAME} (${BOOTSTRAP_SUPER_ADMIN_EMAIL}) viene sempre registrato come Super Admin.</p>
       <label>ID azienda<input name="companyId" placeholder="es. azienda-alpi"></label><label>Codice tecnico<input name="codiceTecnico" placeholder="per tecnico o operatore"></label>
       <button>Crea account</button>
     </form>`;
-  document.getElementById('registerForm').onsubmit = async (event) => { event.preventDefault(); await safe(() => register(Object.fromEntries(new FormData(event.target)))); };
+  const registerForm = document.getElementById('registerForm');
+  registerForm.email.addEventListener('input', () => {
+    if (registerForm.email.value.trim().toLowerCase() === BOOTSTRAP_SUPER_ADMIN_EMAIL) {
+      registerForm.role.value = 'super_admin';
+    }
+  });
+  registerForm.onsubmit = async (event) => { event.preventDefault(); await safe(() => register(Object.fromEntries(new FormData(event.target)))); };
 }
 
 function renderDashboard() {
