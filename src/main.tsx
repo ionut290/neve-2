@@ -1,9 +1,15 @@
 import React from 'react';
-import ReactDOM from 'react-dom/client';
+import {createRoot} from 'react-dom/client';
 import {RootNavigator} from './navigation/RootNavigator';
 import './styles.css';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+const rootElement = document.getElementById('root');
+
+if (!rootElement) {
+  throw new Error('Elemento root non trovato');
+}
+
+createRoot(rootElement).render(
   <React.StrictMode>
     <RootNavigator />
   </React.StrictMode>,

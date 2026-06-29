@@ -25,8 +25,7 @@ declare module 'react/jsx-runtime' {
 }
 
 declare module 'react-dom/client' {
-  const ReactDOM: {createRoot: (element: Element) => {render: (node: any) => void}};
-  export default ReactDOM;
+  export function createRoot(element: Element): {render: (node: any) => void};
 }
 
 declare module 'firebase/app' {
