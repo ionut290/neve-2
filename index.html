@@ -4,12 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0f766e" />
-    <meta name="description" content="PWA per gestione servizi neve, percorsi e tracciamento operatori." />
+    <meta name="description" content="Servizio Neve: WebApp/PWA multi azienda per tecnici e operatori neve." />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <title>Servizio Neve PWA</title>
+    <link rel="preconnect" href="https://unpkg.com" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIINfQF69E01x3U16QHSHiOVG9tjqNvj1I=" crossorigin="" />
+    <link rel="stylesheet" href="/style.css" />
+    <title>Servizio Neve</title>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <noscript>Abilita JavaScript per usare Servizio Neve.</noscript>
+    <div id="app" class="app-shell"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script type="module" src="/app.js"></script>
   </body>
 </html>
