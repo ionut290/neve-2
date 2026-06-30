@@ -44,3 +44,25 @@ button:disabled { opacity: .55; cursor: not-allowed; }
 .tabs button[aria-pressed="true"] { background: var(--primary-dark); }
 .hero { padding: 28px 0; }
 .small { font-size: .85rem; }
+.hero.card {
+  display: grid;
+  gap: 14px;
+  margin: 0 auto 14px;
+  max-width: 1120px;
+  padding: 22px;
+}
+.notice {
+  background: #ecfeff;
+  border: 1px solid #99f6e4;
+  border-radius: 14px;
+  color: var(--primary-dark);
+  font-weight: 800;
+  padding: 14px;
+}
+.auth-grid { align-items: stretch; }
+.waiting-card { max-width: 760px; margin: 0 auto; }
+.dashboard-head { display: flex; gap: 14px; justify-content: space-between; align-items: start; }
+@media (max-width: 640px) {
+  .app-shell { padding: 10px; }
+  .dashboard-head { display: grid; }
+}
