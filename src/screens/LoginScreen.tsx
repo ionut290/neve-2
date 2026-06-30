@@ -1,15 +1,26 @@
 import {useState} from 'react';
 import {PrimaryButton} from '../components/PrimaryButton';
 import {getFirebaseConfigError} from '../firebase/config';
-import {login} from '../services/authService';
+import {login, loginWithGoogle, mapAuthError} from '../services/authService';
 import {useSessionStore} from '../store/sessionStore';
 
-export function LoginScreen() {
+export function LoginScreen({onShowRegister}: {onShowRegister: () => void}) {
   const setCurrentUser = useSessionStore(state => state.setCurrentUser);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string>();
   const configError = getFirebaseConfigError();
+
+  async function handleGoogleLogin() {
+    if (configError) return;
+    try {
+      setError(undefined);
+      const user = await loginWithGoogle();
+      setCurrentUser(user);
+    } catch (loginError) {
+      setError(mapAuthError(loginError));
+    }
+  }
 
   async function handleLogin(event?: {preventDefault: () => void}) {
     event?.preventDefault();
@@ -22,7 +33,7 @@ export function LoginScreen() {
       const user = await login(email.trim(), password);
       setCurrentUser(user);
     } catch (loginError) {
-      setError(loginError instanceof Error ? loginError.message : 'Errore sconosciuto');
+      setError(mapAuthError(loginError));
     }
   }
 
@@ -40,7 +51,9 @@ export function LoginScreen() {
           <input autoComplete="current-password" type="password" value={password} onChange={(event: any) => setPassword(event.target.value)} />
         </label>
         {(configError || error) && <p className="error">{configError ?? error}</p>}
-        <PrimaryButton title="ACCEDI" onPress={() => void handleLogin()} disabled={Boolean(configError)} />
+        <PrimaryButton onClick={() => void handleGoogleLogin()} disabled={Boolean(configError)}>ACCEDI CON GOOGLE</PrimaryButton>
+        <PrimaryButton variant="secondary" onClick={() => void handleLogin()} disabled={Boolean(configError)}>ACCEDI CON EMAIL</PrimaryButton>
+        <button className="link-button" type="button" onClick={onShowRegister}>Non hai un account? Registrati</button>
       </form>
     </main>
   );

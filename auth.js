@@ -8,16 +8,13 @@ import {
   serverTimestamp,
   setDoc,
   signInWithEmailAndPassword,
+  signInWithPopup,
+  googleProvider,
   signOut,
   updateProfile,
 } from './firebase.js';
 
-export const ROLES = ['super_admin', 'azienda_admin', 'tecnico', 'operatore'];
-export const DIRECT_ADMIN_EMAILS = ['ionut29019@gmail.com'];
-
-export function isDirectAdminEmail(email) {
-  return DIRECT_ADMIN_EMAILS.includes(normalizeEmail(email));
-}
+export const ROLES = ['admin', 'tecnico', 'operatore'];
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
@@ -38,32 +35,62 @@ export async function login(email, password) {
   return credential.user;
 }
 
-export async function register({ email, password, nome }) {
+export async function loginWithGoogle() {
+  const credential = await signInWithPopup(auth, googleProvider);
+  const profile = await getUserProfile(credential.user.uid);
+  if (!profile) throw new Error('Account Google non registrato: usa Registrazione con Google e attendi l’abilitazione admin.');
+  return credential.user;
+}
+
+export async function register({ email, password, nome, ruolo = 'operatore', aziendaId, tecnicoId }) {
   const normalizedEmail = normalizeEmail(email);
   const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
   const user = credential.user;
   const now = isFirebaseConfigured ? serverTimestamp() : new Date().toISOString();
-  const directAdmin = isDirectAdminEmail(normalizedEmail);
   const profile = {
     uid: user.uid,
     nome: String(nome || '').trim(),
     email: normalizedEmail,
-    ruolo: directAdmin ? 'super_admin' : 'operatore',
-    companyId: '',
-    tecnicoId: '',
-    enabled: directAdmin,
+    ruolo,
+    aziendaId: String(aziendaId || '').trim(),
+    tecnicoId: String(tecnicoId || '').trim(),
+    stato: 'in_attesa',
     createdAt: now,
-    updatedAt: now,
   };
 
   await updateProfile(user, { displayName: profile.nome });
 
   if (isFirebaseConfigured) {
     await setDoc(doc(db, 'users', user.uid), profile);
+    if (ruolo === 'operatore') await setDoc(doc(db, 'aziende', profile.aziendaId, 'operatori', user.uid), {uid: user.uid, nome: profile.nome, tecnicoId: profile.tecnicoId, stato: 'in_attesa'});
   } else {
     saveLocalUser(profile);
   }
 
+  return profile;
+}
+
+export async function registerWithGoogle({ ruolo = 'operatore', aziendaId, tecnicoId }) {
+  const credential = await signInWithPopup(auth, googleProvider);
+  const user = credential.user;
+  const email = normalizeEmail(user.email);
+  const now = isFirebaseConfigured ? serverTimestamp() : new Date().toISOString();
+  const profile = {
+    uid: user.uid,
+    nome: String(user.displayName || email.split('@')[0] || '').trim(),
+    email,
+    ruolo,
+    aziendaId: String(aziendaId || '').trim(),
+    tecnicoId: String(tecnicoId || '').trim(),
+    stato: 'in_attesa',
+    createdAt: now,
+  };
+  if (isFirebaseConfigured) {
+    await setDoc(doc(db, 'users', user.uid), profile);
+    if (ruolo === 'operatore') await setDoc(doc(db, 'aziende', profile.aziendaId, 'operatori', user.uid), {uid: user.uid, nome: profile.nome, tecnicoId: profile.tecnicoId, stato: 'in_attesa'});
+  } else {
+    saveLocalUser(profile);
+  }
   return profile;
 }
 
@@ -76,18 +103,9 @@ export async function getUserProfile(uid) {
     let snapshot = await getDoc(doc(db, 'users', uid));
     if (!snapshot.exists()) snapshot = await getDoc(doc(db, 'utenti', uid));
     if (!snapshot.exists()) return null;
-    return applyDirectAdminAccess(snapshot.data());
+    return snapshot.data();
   }
 
   const profile = localUsers()[uid] || null;
-  return profile ? applyDirectAdminAccess(profile) : null;
-}
-
-function applyDirectAdminAccess(profile) {
-  if (!isDirectAdminEmail(profile.email)) return profile;
-  return {
-    ...profile,
-    ruolo: 'super_admin',
-    enabled: true,
-  };
+  return profile;
 }

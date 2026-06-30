@@ -120,3 +120,58 @@ input, select {
 @media (max-width: 900px) {
   .hero, .toolbar, .dashboard-grid { grid-template-columns: 1fr; }
 }
+
+.auth-page {
+  align-items: center;
+  display: grid;
+  min-height: 100vh;
+  padding: 24px;
+}
+.auth-panel {
+  display: grid;
+  gap: 14px;
+  margin: 0 auto;
+  max-width: 520px;
+  width: 100%;
+}
+.auth-panel h1 { font-size: clamp(2rem, 8vw, 4rem); }
+.error, .auth-message {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 14px;
+  color: #991b1b;
+  font-weight: 800;
+  margin: 12px auto;
+  max-width: 520px;
+  padding: 12px 14px;
+}
+.success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 14px;
+  color: #166534;
+  font-weight: 800;
+  padding: 12px 14px;
+}
+.link-button {
+  background: transparent;
+  border: 0;
+  color: #0f766e;
+  cursor: pointer;
+  font-weight: 900;
+  padding: 8px;
+}
+.topbar {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.two-columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.three-columns { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.map-layout { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr) 340px; }
+.map-card { background: #e0f2fe; border-radius: 28px; overflow: hidden; }
+.map-svg { display: block; width: 100%; }
+.service-panel { display: grid; gap: 12px; align-content: start; }
+@media (max-width: 900px) { .two-columns, .three-columns, .map-layout { grid-template-columns: 1fr; } }

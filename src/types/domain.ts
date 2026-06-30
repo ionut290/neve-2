@@ -1,39 +1,30 @@
 import {Timestamp as FirestoreTimestamp} from 'firebase/firestore';
 
-export type UserRole = 'super_admin' | 'azienda_admin' | 'tecnico' | 'operatore';
+export type UserRole = 'admin' | 'tecnico' | 'operatore';
+export type UserStatus = 'in_attesa' | 'abilitato' | 'bloccato';
 export type Timestamp = FirestoreTimestamp | Date;
 
-export interface BaseCompanyDocument {
-  aziendaId: string;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
-}
-
-export interface Azienda extends BaseCompanyDocument {
+export interface Azienda {
   nome: string;
-  codiceFiscale?: string;
+  createdAt: Timestamp;
 }
 
-export interface Utente extends BaseCompanyDocument {
+export interface Utente {
   uid: string;
   nome: string;
   email: string;
   ruolo: UserRole;
+  aziendaId: string;
   tecnicoId?: string;
-  operatoreId?: string;
+  stato: UserStatus;
+  createdAt: Timestamp;
 }
 
-export interface Tecnico extends BaseCompanyDocument {
-  utenteId: string;
-  nome: string;
-  codiceTecnico: string;
-}
-
-export interface Operatore extends BaseCompanyDocument {
-  utenteId: string;
+export interface Operatore {
+  uid: string;
   nome: string;
   tecnicoId: string;
-  codiceTecnico: string;
+  stato: UserStatus;
 }
 
 export interface PuntoGps {
@@ -45,24 +36,25 @@ export interface PuntoGps {
   recordedAt: Timestamp;
 }
 
-export interface ProgettoNeve extends BaseCompanyDocument {
-  tecnicoId: string;
+export interface Percorso {
   nome: string;
   descrizione?: string;
-  operatoreIds: string[];
-  percorsoIds: string[];
-  stato: 'bozza' | 'assegnato' | 'attivo' | 'chiuso';
-}
-
-export interface Percorso extends BaseCompanyDocument {
   tecnicoId: string;
-  progettoNeveId: string;
-  nome: string;
-  punti: PuntoGps[];
-  operatoreIds: string[];
+  stato: 'bozza' | 'assegnato' | 'attivo' | 'chiuso';
+  createdAt: Timestamp;
+  punti?: PuntoGps[];
 }
 
-export interface ServizioNeve extends BaseCompanyDocument {
+export interface ProgettoNeve {
+  nome: string;
+  tecnicoId: string;
+  percorsoId?: string;
+  stato: 'bozza' | 'assegnato' | 'attivo' | 'chiuso';
+  createdAt: Timestamp;
+}
+
+export interface ServizioNeve {
+  aziendaId: string;
   tecnicoId: string;
   operatoreId: string;
   progettoNeveId: string;
@@ -74,27 +66,16 @@ export interface ServizioNeve extends BaseCompanyDocument {
   note?: string;
   fotoUrls: string[];
   puntiGps: PuntoGps[];
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }
 
-export interface PosizioneLive extends BaseCompanyDocument {
+export interface PosizioneLive {
+  aziendaId: string;
   tecnicoId: string;
   operatoreId: string;
   servizioNeveId: string;
   punto: PuntoGps;
-}
-
-export interface Segnalazione extends BaseCompanyDocument {
-  tecnicoId?: string;
-  operatoreId?: string;
-  progettoNeveId?: string;
-  testo: string;
-  fotoUrls: string[];
-  stato: 'aperta' | 'in_lavorazione' | 'chiusa';
-}
-
-export interface Mezzo extends BaseCompanyDocument {
-  tecnicoId?: string;
-  operatoreId?: string;
-  targa: string;
-  descrizione: string;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
 }

@@ -2,9 +2,11 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/fireba
 import {
   createUserWithEmailAndPassword as firebaseCreateUserWithEmailAndPassword,
   getAuth,
+  GoogleAuthProvider as FirebaseGoogleAuthProvider,
   onAuthStateChanged as firebaseOnAuthStateChanged,
   signInWithEmailAndPassword as firebaseSignInWithEmailAndPassword,
   signOut as firebaseSignOut,
+  signInWithPopup as firebaseSignInWithPopup,
   updateProfile as firebaseUpdateProfile,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
@@ -50,6 +52,7 @@ export const app = isFirebaseConfigured ? initializeApp(firebaseConfig) : null;
 export const auth = isFirebaseConfigured ? getAuth(app) : null;
 export const db = isFirebaseConfigured ? getFirestore(app) : null;
 export const storage = isFirebaseConfigured ? getStorage(app) : null;
+export const googleProvider = isFirebaseConfigured ? new FirebaseGoogleAuthProvider() : { providerId: 'google.com' };
 
 const localAuthListeners = new Set();
 const localCurrentUserKey = 'servizioNeve.currentUser';
@@ -68,6 +71,19 @@ export function onAuthStateChanged(authInstance, callback) {
 export async function createUserWithEmailAndPassword(authInstance, email, password) {
   if (isFirebaseConfigured) return firebaseCreateUserWithEmailAndPassword(authInstance, email, password);
   const user = { uid: crypto.randomUUID(), email, displayName: email.split('@')[0], password };
+  localStorage.setItem(localCurrentUserKey, JSON.stringify(user));
+  emitLocalAuth(user);
+  return { user };
+}
+
+
+export async function signInWithPopup(authInstance, provider) {
+  if (isFirebaseConfigured) return firebaseSignInWithPopup(authInstance, provider);
+  const email = window.prompt('Email Google demo');
+  if (!email) throw new Error('Accesso Google annullato.');
+  const users = JSON.parse(localStorage.getItem('servizioNeve.users') || '{}');
+  const existing = Object.values(users).find((profile) => profile.email?.toLowerCase() === email.toLowerCase());
+  const user = existing || { uid: crypto.randomUUID(), email, displayName: email.split('@')[0], providerId: 'google.com' };
   localStorage.setItem(localCurrentUserKey, JSON.stringify(user));
   emitLocalAuth(user);
   return { user };

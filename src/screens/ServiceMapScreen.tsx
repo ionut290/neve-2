@@ -15,17 +15,17 @@ export function ServiceMapScreen({onBack}: Props) {
   const [serviceContext, setServiceContext] = useState<ActiveServiceContext>();
 
   async function start() {
-    if (!user?.aziendaId || !user?.tecnicoId || !user?.operatoreId) {
+    if (!user?.aziendaId || !user?.tecnicoId) {
       setMessage('Profilo incompleto: operatore non collegato a un tecnico.');
       return;
     }
     const context = {
       aziendaId: user.aziendaId,
       tecnicoId: user.tecnicoId,
-      operatoreId: user.operatoreId,
+      operatoreId: user.uid,
       progettoNeveId: 'progetto-demo',
       percorsoId: 'percorso-demo',
-      servizioNeveId: `${user.operatoreId}-${Date.now()}`,
+      servizioNeveId: `${user.uid}-${Date.now()}`,
     };
     setServiceContext(context);
     await startSnowService(context);
@@ -61,8 +61,8 @@ export function ServiceMapScreen({onBack}: Props) {
         <aside className="panel service-panel">
           <h2>Controllo servizio</h2>
           <p>{message}</p>
-          <PrimaryButton title="INIZIA SERVIZIO NEVE" onPress={() => void start()} disabled={active} />
-          <PrimaryButton title="FINE SERVIZIO" variant="danger" onPress={() => void stop()} disabled={!active} />
+          <PrimaryButton onClick={() => void start()} disabled={active}>INIZIA SERVIZIO NEVE</PrimaryButton>
+          <PrimaryButton variant="danger" onClick={() => void stop()} disabled={!active}>FINE SERVIZIO</PrimaryButton>
         </aside>
       </section>
     </main>
