@@ -66,3 +66,23 @@ button:disabled { opacity: .55; cursor: not-allowed; }
   .app-shell { padding: 10px; }
   .dashboard-head { display: grid; }
 }
+.hidden { display: none !important; }
+.compact { margin: 0; padding: 10px; }
+.module-head { display: flex; gap: 10px; justify-content: space-between; align-items: center; }
+.admin-grid { align-items: start; margin-top: 14px; }
+code { background: #e7f3f4; border-radius: 8px; color: var(--primary-dark); font-weight: 900; padding: 3px 6px; }
+.item form, form.item { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 8px; }
+@media (min-width: 860px) { .admin-grid.grid.three { grid-template-columns: 1fr 1fr 1.25fr; } }
+@media (max-width: 640px) {
+  .module-head { align-items: stretch; display: grid; }
+  .row > button { flex: 1 1 auto; }
+}
+
+.project-grid { margin-top: 14px; }
+.projects-card { grid-column: 1 / -1; }
+.project-summary { display: grid; gap: 12px; }
+.route-panel { border-top: 1px solid var(--border); padding-top: 12px; }
+.route-map { min-height: 320px; }
+.map-help, .map-fallback { background: #eef7f7; border: 1px dashed var(--primary); border-radius: 12px; color: var(--primary-dark); font-weight: 700; padding: 10px; }
+.actions { justify-content: flex-start; }
+@media (min-width: 860px) { .project-summary { grid-template-columns: 1fr auto; align-items: start; } }
