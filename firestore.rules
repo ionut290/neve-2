@@ -2,90 +2,59 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
-    function userPath(uid) { return /databases/$(database)/documents/users/$(uid); }
-    function profile() { return get(userPath(request.auth.uid)).data; }
-    function enabled() { return signedIn() && profile().enabled == true; }
+    function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function enabled() { return signedIn() && profile().stato == 'abilitato'; }
     function role() { return profile().ruolo; }
-    function companyId() { return profile().companyId; }
-    function technicianId() { return profile().tecnicoId; }
-    function isSuperAdmin() { return enabled() && role() == 'super_admin'; }
-    function isCompanyAdmin() { return enabled() && role() == 'azienda_admin'; }
-    function isTechnician() { return enabled() && role() == 'tecnico'; }
-    function isOperator() { return enabled() && role() == 'operatore'; }
-    function sameCompany(cid) { return enabled() && companyId() == cid; }
-    function validUserBase() {
-      return request.resource.data.keys().hasOnly(['uid', 'nome', 'email', 'ruolo', 'companyId', 'tecnicoId', 'enabled', 'createdAt', 'updatedAt'])
+    function aziendaId() { return profile().aziendaId; }
+    function tecnicoId() { return profile().tecnicoId; }
+    function isAdmin() { return enabled() && role() == 'admin'; }
+    function isTecnico() { return enabled() && role() == 'tecnico'; }
+    function isOperatore() { return enabled() && role() == 'operatore'; }
+    function sameAzienda(cid) { return enabled() && aziendaId() == cid; }
+    function validUser() {
+      return request.resource.data.keys().hasOnly(['uid', 'nome', 'email', 'ruolo', 'aziendaId', 'tecnicoId', 'stato', 'createdAt'])
         && request.resource.data.uid is string
-        && request.resource.data.nome is string
-        && request.resource.data.email is string
-        && request.resource.data.ruolo in ['super_admin', 'azienda_admin', 'tecnico', 'operatore']
-        && request.resource.data.enabled is bool;
-    }
-    function validRouteBase(cid) {
-      return request.resource.data.companyId == cid
-        && request.resource.data.keys().hasOnly(['id', 'companyId', 'tecnicoId', 'nome', 'zona', 'descrizione', 'puntiGps', 'assignedOperators', 'createdAt', 'updatedAt'])
-        && request.resource.data.tecnicoId is string
-        && request.resource.data.nome is string
-        && request.resource.data.assignedOperators is list;
-    }
-
-    match /users/{userId} {
-      allow read: if signedIn() && (
-        userId == request.auth.uid
-        || isSuperAdmin()
-        || (isCompanyAdmin() && resource.data.companyId == companyId())
-        || (isTechnician() && resource.data.companyId == companyId() && (resource.data.uid == request.auth.uid || resource.data.tecnicoId == request.auth.uid))
-      );
-      allow create: if signedIn() && userId == request.auth.uid && validUserBase()
         && request.resource.data.email == request.auth.token.email
-        && request.resource.data.ruolo == 'operatore'
-        && request.resource.data.enabled == false;
-      allow create, update: if isSuperAdmin() && validUserBase() && request.resource.data.ruolo in ['azienda_admin', 'tecnico', 'operatore'];
-      allow update: if isCompanyAdmin()
-        && resource.data.companyId == companyId()
-        && request.resource.data.companyId == companyId()
-        && validUserBase()
-        && request.resource.data.ruolo in ['tecnico', 'operatore'];
-      allow delete: if isSuperAdmin();
+        && request.resource.data.ruolo in ['admin', 'tecnico', 'operatore']
+        && request.resource.data.stato in ['in_attesa', 'abilitato', 'bloccato'];
     }
 
-    match /companies/{cid} {
-      allow read: if isSuperAdmin() || sameCompany(cid);
-      allow create, update, delete: if isSuperAdmin();
+    match /users/{uid} {
+      allow read: if signedIn() && (uid == request.auth.uid || (sameAzienda(resource.data.aziendaId) && (isAdmin() || (isTecnico() && resource.data.tecnicoId == request.auth.uid))));
+      allow create: if signedIn() && uid == request.auth.uid && validUser() && request.resource.data.stato == 'in_attesa';
+      allow update: if isAdmin() && resource.data.aziendaId == aziendaId() && request.resource.data.aziendaId == aziendaId();
+      allow delete: if isAdmin() && resource.data.aziendaId == aziendaId();
+    }
 
-      match /routes/{routeId} {
-        allow read: if isSuperAdmin()
-          || (sameCompany(cid) && (
-            isCompanyAdmin()
-            || (isTechnician() && resource.data.tecnicoId == request.auth.uid)
-            || (isOperator() && request.auth.uid in resource.data.assignedOperators)
-          ));
-        allow create: if sameCompany(cid)
-          && validRouteBase(cid)
-          && (isCompanyAdmin() || (isTechnician() && request.resource.data.tecnicoId == request.auth.uid));
-        allow update: if sameCompany(cid)
-          && validRouteBase(cid)
-          && (isCompanyAdmin() || (isTechnician() && resource.data.tecnicoId == request.auth.uid && request.resource.data.tecnicoId == request.auth.uid));
-        allow delete: if sameCompany(cid) && (isCompanyAdmin() || (isTechnician() && resource.data.tecnicoId == request.auth.uid));
+    match /aziende/{cid} {
+      allow read: if sameAzienda(cid);
+      allow create, update, delete: if isAdmin() && aziendaId() == cid;
 
-        match /serviceSessions/{sessionId} {
-          allow read: if isSuperAdmin()
-            || (sameCompany(cid) && (
-              isCompanyAdmin()
-              || (isTechnician() && resource.data.tecnicoId == request.auth.uid)
-              || (isOperator() && resource.data.operatoreId == request.auth.uid)
-            ));
-          allow create, update: if sameCompany(cid)
-            && request.resource.data.companyId == cid
-            && request.resource.data.operatoreId == request.auth.uid
-            && isOperator()
-            && request.auth.uid in get(/databases/$(database)/documents/companies/$(cid)/routes/$(routeId)).data.assignedOperators;
-        }
+      match /percorsi/{percorsoId} {
+        allow read: if sameAzienda(cid) && (isAdmin() || (isTecnico() && resource.data.tecnicoId == request.auth.uid) || (isOperatore() && resource.data.tecnicoId == tecnicoId()));
+        allow create, update, delete: if sameAzienda(cid) && (isAdmin() || (isTecnico() && request.resource.data.tecnicoId == request.auth.uid));
       }
-    }
 
-    match /{document=**} {
-      allow read, write: if false;
+      match /progetti/{progettoId} {
+        allow read: if sameAzienda(cid) && (isAdmin() || (isTecnico() && resource.data.tecnicoId == request.auth.uid) || (isOperatore() && resource.data.tecnicoId == tecnicoId()));
+        allow create, update, delete: if sameAzienda(cid) && (isAdmin() || (isTecnico() && request.resource.data.tecnicoId == request.auth.uid));
+      }
+
+      match /operatori/{operatoreId} {
+        allow read: if sameAzienda(cid) && (isAdmin() || (isTecnico() && resource.data.tecnicoId == request.auth.uid) || (isOperatore() && resource.data.uid == request.auth.uid));
+        allow create: if signedIn() && operatoreId == request.auth.uid && request.resource.data.uid == request.auth.uid && request.resource.data.stato == 'in_attesa';
+        allow update, delete: if sameAzienda(cid) && (isAdmin() || (isTecnico() && resource.data.tecnicoId == request.auth.uid));
+      }
+
+      match /serviziNeve/{servizioId} {
+        allow read: if sameAzienda(cid) && (isAdmin() || (isTecnico() && resource.data.tecnicoId == request.auth.uid) || (isOperatore() && resource.data.operatoreId == request.auth.uid));
+        allow create, update: if sameAzienda(cid) && isOperatore() && request.resource.data.operatoreId == request.auth.uid && request.resource.data.tecnicoId == tecnicoId();
+      }
+
+      match /posizioniLive/{operatoreId} {
+        allow read: if sameAzienda(cid) && (isAdmin() || (isTecnico() && resource.data.tecnicoId == request.auth.uid) || (isOperatore() && operatoreId == request.auth.uid));
+        allow create, update: if sameAzienda(cid) && isOperatore() && operatoreId == request.auth.uid && request.resource.data.tecnicoId == tecnicoId();
+      }
     }
   }
 }

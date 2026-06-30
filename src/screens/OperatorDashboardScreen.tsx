@@ -8,12 +8,12 @@ type Props = {onOpenMap: () => void};
 export function OperatorDashboardScreen({onOpenMap}: Props) {
   const user = useSessionStore(state => state.currentUser);
   const setCurrentUser = useSessionStore(state => state.setCurrentUser);
-  const [codiceTecnico, setCodiceTecnico] = useState('');
+  const [tecnicoId, setTecnicoId] = useState('');
   const [status, setStatus] = useState('Percorsi assegnati sincronizzati da Firestore.');
 
   async function collegaTecnico() {
-    if (!user?.operatoreId || !user.aziendaId) return;
-    await collegaOperatoreATecnico({operatoreId: user.operatoreId, aziendaId: user.aziendaId, codiceTecnico});
+    if (!user?.uid || !user.aziendaId) return;
+    await collegaOperatoreATecnico({operatoreId: user.uid, aziendaId: user.aziendaId, tecnicoId});
     setStatus('Operatore collegato al tecnico.');
   }
 
@@ -41,16 +41,16 @@ export function OperatorDashboardScreen({onOpenMap}: Props) {
           <h2>Collegamento tecnico</h2>
           <p>{status}</p>
           <label>
-            Codice tecnico
-            <input value={codiceTecnico} onChange={(event: any) => setCodiceTecnico(event.target.value)} placeholder="Es. TEC-1234" />
+            Tecnico ID
+            <input value={tecnicoId} onChange={(event: any) => setTecnicoId(event.target.value)} placeholder="Es. TEC-1234" />
           </label>
-          <PrimaryButton title="COLLEGATI AL TECNICO" onPress={() => void collegaTecnico()} />
+          <PrimaryButton onClick={() => void collegaTecnico()}>COLLEGATI AL TECNICO</PrimaryButton>
         </article>
 
         <article className="panel">
           <h2>Percorsi assegnati</h2>
           <p>Apri la mappa percorso, inizia il tracciamento GPS dal browser e completa il servizio con km, durata, note e foto.</p>
-          <PrimaryButton title="APRI MAPPA PERCORSO" onPress={onOpenMap} />
+          <PrimaryButton onClick={onOpenMap}>APRI MAPPA PERCORSO</PrimaryButton>
         </article>
       </section>
     </main>

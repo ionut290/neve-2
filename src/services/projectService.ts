@@ -1,35 +1,26 @@
-import {addDoc, collection, doc, setDoc} from 'firebase/firestore';
-import {getFirebaseDb, serverTimestamp} from '../firebase/config';
-import {COLLECTIONS} from '../firebase/collections';
+import {addDoc, doc, setDoc} from 'firebase/firestore';
+import {serverTimestamp} from '../firebase/config';
+import {percorsiCollection, progettiCollection} from '../firebase/collections';
 import {Percorso, ProgettoNeve} from '../types/domain';
 
-export async function creaProgettoNeve(input: Pick<ProgettoNeve, 'aziendaId' | 'tecnicoId' | 'nome' | 'descrizione'>) {
-  return addDoc(collection(getFirebaseDb(), COLLECTIONS.progettiNeve), {
-    ...input,
-    operatoreIds: [],
-    percorsoIds: [],
+export async function creaProgettoNeve(input: Pick<ProgettoNeve, 'tecnicoId' | 'nome'> & {aziendaId: string; percorsoId?: string}) {
+  return addDoc(progettiCollection(input.aziendaId), {
+    nome: input.nome,
+    tecnicoId: input.tecnicoId,
+    percorsoId: input.percorsoId ?? '',
     stato: 'bozza',
     createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  } satisfies ProgettoNeve);
 }
 
-export async function caricaPercorsoGps(input: Omit<Percorso, 'createdAt' | 'updatedAt'>) {
-  return addDoc(collection(getFirebaseDb(), COLLECTIONS.percorsi), {
-    ...input,
+export async function caricaPercorsoGps(input: Omit<Percorso, 'createdAt'> & {aziendaId: string}) {
+  const {aziendaId, ...percorso} = input;
+  return addDoc(percorsiCollection(aziendaId), {
+    ...percorso,
     createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
   });
 }
 
-export async function assegnaOperatori(progettoId: string, operatoreIds: string[]) {
-  await setDoc(
-    doc(getFirebaseDb(), COLLECTIONS.progettiNeve, progettoId),
-    {
-      operatoreIds,
-      stato: 'assegnato',
-      updatedAt: serverTimestamp(),
-    },
-    {merge: true},
-  );
+export async function assegnaPercorsoAProgetto(aziendaId: string, progettoId: string, percorsoId: string) {
+  await setDoc(doc(progettiCollection(aziendaId), progettoId), {percorsoId, stato: 'assegnato'}, {merge: true});
 }

@@ -33,17 +33,17 @@ export function TechnicianDashboardScreen({onOpenMap}: Props) {
         <article className="panel">
           <h2>Gestione progetto neve</h2>
           <p>Crea progetto, carica o correggi percorsi GPS e assegna operatori.</p>
-          <PrimaryButton title="CREA PROGETTO NEVE" onPress={() => void creaDemo()} />
+          <PrimaryButton onClick={() => void creaDemo()}>CREA PROGETTO NEVE</PrimaryButton>
         </article>
         <article className="panel">
           <h2>Mappa live operatori</h2>
           <p>Le posizioni arrivano da posizioniLive filtrata per aziendaId e tecnicoId.</p>
-          <PrimaryButton title="VEDI MAPPA LIVE" onPress={onOpenMap} />
+          <PrimaryButton onClick={onOpenMap}>VEDI MAPPA LIVE</PrimaryButton>
         </article>
         <article className="panel">
           <h2>Storico e report</h2>
           <p>Consulta servizi completati ed esporta report operativi.</p>
-          <PrimaryButton title="ESPORTA REPORT" onPress={() => undefined} />
+          <PrimaryButton onClick={() => undefined}>ESPORTA REPORT</PrimaryButton>
         </article>
       </section>
     </main>
