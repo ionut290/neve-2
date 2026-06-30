@@ -39,9 +39,26 @@ service cloud.firestore {
       allow create, update, delete: if isSuperAdmin();
     }
 
+
+    match /progettiNeve/{progettoId} {
+      allow read: if isSuperAdmin()
+        || (isCompanyAdmin() && resource.data.aziendaId == profile().aziendaId)
+        || (isTechnician() && resource.data.tecnicoId == request.auth.uid);
+      allow create: if isSuperAdmin()
+        || (isCompanyAdmin() && request.resource.data.aziendaId == profile().aziendaId)
+        || (isTechnician() && request.resource.data.tecnicoId == request.auth.uid && request.resource.data.aziendaId == profile().aziendaId);
+      allow update: if isSuperAdmin()
+        || (isCompanyAdmin() && resource.data.aziendaId == profile().aziendaId && request.resource.data.aziendaId == profile().aziendaId)
+        || (isTechnician() && resource.data.tecnicoId == request.auth.uid && request.resource.data.tecnicoId == request.auth.uid);
+      allow delete: if isSuperAdmin()
+        || (isCompanyAdmin() && resource.data.aziendaId == profile().aziendaId)
+        || (isTechnician() && resource.data.tecnicoId == request.auth.uid);
+    }
+
     match /percorsi/{percorsoId} {
       allow read: if sameCompany() && (isAdmin() || ownTechnicianData() || assignedOperatorRoute());
-      allow create, update, delete: if incomingSameCompany() && (isAdmin() || (isTechnician() && request.resource.data.tecnicoId == request.auth.uid));
+      allow create: if incomingSameCompany() && (isAdmin() || (isTechnician() && request.resource.data.tecnicoId == request.auth.uid));
+      allow update, delete: if sameCompany() && (isAdmin() || (isTechnician() && resource.data.tecnicoId == request.auth.uid));
     }
 
     match /tracceGPS/{tracciaId} {

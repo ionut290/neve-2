@@ -77,3 +77,12 @@ code { background: #e7f3f4; border-radius: 8px; color: var(--primary-dark); font
   .module-head { align-items: stretch; display: grid; }
   .row > button { flex: 1 1 auto; }
 }
+
+.project-grid { margin-top: 14px; }
+.projects-card { grid-column: 1 / -1; }
+.project-summary { display: grid; gap: 12px; }
+.route-panel { border-top: 1px solid var(--border); padding-top: 12px; }
+.route-map { min-height: 320px; }
+.map-help, .map-fallback { background: #eef7f7; border: 1px dashed var(--primary); border-radius: 12px; color: var(--primary-dark); font-weight: 700; padding: 10px; }
+.actions { justify-content: flex-start; }
+@media (min-width: 860px) { .project-summary { grid-template-columns: 1fr auto; align-items: start; } }
