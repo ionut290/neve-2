@@ -5,11 +5,12 @@ service cloud.firestore {
     function profile() { return get(/databases/$(database)/documents/utenti/$(request.auth.uid)).data; }
     function enabled() { return signedIn() && profile().abilitato == true; }
     function role() { return profile().ruolo; }
-    function isAdmin() { return enabled() && role() == 'admin'; }
+    function isDirectAdminEmail() { return signedIn() && request.auth.token.email == 'ionut29019@gmail.com'; }
+    function isAdmin() { return (enabled() && role() == 'admin') || isDirectAdminEmail(); }
     function isTechnician() { return enabled() && role() == 'tecnico'; }
     function isOperator() { return enabled() && role() == 'operatore'; }
-    function sameCompany() { return enabled() && resource.data.aziendaId == profile().aziendaId; }
-    function incomingSameCompany() { return enabled() && request.resource.data.aziendaId == profile().aziendaId; }
+    function sameCompany() { return isDirectAdminEmail() || (enabled() && resource.data.aziendaId == profile().aziendaId); }
+    function incomingSameCompany() { return isDirectAdminEmail() || (enabled() && request.resource.data.aziendaId == profile().aziendaId); }
     function ownTechnicianData() { return isTechnician() && resource.data.tecnicoId == request.auth.uid; }
     function ownOperatorData() { return isOperator() && resource.data.operatoreId == request.auth.uid; }
     function assignedOperatorRoute() {
@@ -24,9 +25,11 @@ service cloud.firestore {
         && uid == request.auth.uid
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.email == request.auth.token.email
-        && request.resource.data.ruolo == 'operatore'
-        && request.resource.data.abilitato == false;
-      allow update: if isAdmin();
+        && (
+          (request.resource.data.ruolo == 'operatore' && request.resource.data.abilitato == false)
+          || (isDirectAdminEmail() && request.resource.data.ruolo == 'admin' && request.resource.data.abilitato == true)
+        );
+      allow update: if isAdmin() || (uid == request.auth.uid && isDirectAdminEmail());
     }
 
     match /aziende/{aziendaId} {

@@ -11,6 +11,7 @@ Servizio Neve è una WebApp/PWA mobile-first per una gestione multi-azienda di p
   - `ruolo: "operatore"`
   - `abilitato: false`
 - Schermata di attesa per gli account non abilitati.
+- L’email `ionut29019@gmail.com` è configurata come admin con accesso diretto e non resta in attesa di abilitazione.
 - Dashboard vuote in base al ruolo abilitato:
   - `admin`
   - `tecnico`
