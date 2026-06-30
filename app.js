@@ -14,23 +14,33 @@ import {
   setDoc,
   where,
 } from './firebase.js';
-import { getUserProfile, login, loginWithGoogle, logout, registerWithGoogle } from './auth.js';
+import { PENDING_GOOGLE_MESSAGE, getUserProfile, handleGoogleRedirectResult, login, loginWithGoogle, logout, registerWithGoogle } from './auth.js';
 
 const app = document.getElementById('app');
 const html = String.raw;
 const roles = ['admin', 'tecnico', 'operatore'];
-const state = { user: null, profile: null, loading: true, aziende: [], users: [], percorsi: [], activeRoute: null, watchId: null, serviceId: '', gpsPoints: [] };
+const state = { user: null, profile: null, loading: true, authMessage: '', aziende: [], users: [], percorsi: [], activeRoute: null, watchId: null, serviceId: '', gpsPoints: [] };
+
+handleGoogleRedirectResult()
+  .then((profile) => {
+    if (profile && !isEnabled(profile)) state.authMessage = PENDING_GOOGLE_MESSAGE;
+  })
+  .catch((error) => {
+    console.error(error);
+    state.authMessage = error.message || 'Accesso Google non riuscito.';
+  });
 
 onAuthStateChanged(auth, async (user) => {
   state.user = user;
   state.profile = user ? await getUserProfile(user.uid) : null;
+  if (state.profile && !isEnabled(state.profile)) state.authMessage = PENDING_GOOGLE_MESSAGE;
   state.loading = false;
   await loadData();
   render();
 });
 
 const uid = () => state.profile?.uid || state.user?.uid || '';
-const isEnabled = (u = state.profile) => u?.stato === 'abilitato';
+const isEnabled = (u = state.profile) => u?.enabled === true || u?.stato === 'abilitato';
 const isAdmin = () => state.profile?.ruolo === 'admin';
 const role = () => state.profile?.ruolo || state.profile?.role;
 const aziendaId = () => state.profile?.aziendaId || '';
@@ -80,13 +90,13 @@ function header(title, subtitle) { return html`<section class="card stack"><div 
 function bindLogout() { document.getElementById('logoutBtn').onclick = logout; }
 
 function renderAuth(mode = 'login') {
-  shell(html`<section class="grid two auth-grid"><article class="card stack"><h2>${mode === 'login' ? 'Login' : 'Registrazione'}</h2><p class="muted">L’accesso usa Firebase Authentication; dopo il login viene letto <code>users/{userId}</code> e viene aperta la dashboard corretta.</p><div class="tabs"><button id="showLogin" class="${mode === 'login' ? '' : 'secondary'}">Login</button><button id="showRegister" class="${mode === 'register' ? '' : 'secondary'}">Registrazione</button></div></article><article class="card stack"><form id="authForm" class="stack">${mode === 'register' ? '<label>Nome<input name="nome" required></label><label>Ruolo<select name="ruolo"><option value="operatore">operatore</option><option value="tecnico">tecnico</option><option value="admin">admin</option></select></label><label>Azienda ID<input name="aziendaId" required></label><label>Tecnico ID (per operatori)<input name="tecnicoId"></label>' : ''}${mode === 'login' ? '<label>Email<input name="email" type="email"></label><label>Password<input name="password" type="password" minlength="6"></label>' : '<p class="muted">La registrazione usa Google: compila ruolo e azienda, poi scegli l’account Google.</p>'}<button>${mode === 'login' ? 'Accedi con email' : 'Registrati con Google'}</button></form>${mode === 'login' ? '<button id="googleLoginBtn" class="secondary">Accedi con Google</button>' : ''}<p id="authMsg" class="error"></p></article></section>`);
+  shell(html`<section class="grid two auth-grid"><article class="card stack"><h2>${mode === 'login' ? 'Login' : 'Registrazione'}</h2><p class="muted">L’accesso usa Firebase Authentication; dopo il login viene letto <code>users/{userId}</code> e viene aperta la dashboard corretta.</p><div class="tabs"><button id="showLogin" class="${mode === 'login' ? '' : 'secondary'}">Login</button><button id="showRegister" class="${mode === 'register' ? '' : 'secondary'}">Registrazione</button></div></article><article class="card stack"><form id="authForm" class="stack">${mode === 'register' ? '<label>Nome<input name="nome" required></label><label>Ruolo<select name="ruolo"><option value="operatore">operatore</option><option value="tecnico">tecnico</option><option value="admin">admin</option></select></label><label>Azienda ID<input name="aziendaId" required></label><label>Tecnico ID (per operatori)<input name="tecnicoId"></label>' : ''}${mode === 'login' ? '<label>Email<input name="email" type="email"></label><label>Password<input name="password" type="password" minlength="6"></label>' : '<p class="muted">La registrazione usa Google: compila ruolo e azienda, poi scegli l’account Google.</p>'}<button>${mode === 'login' ? 'Accedi con email' : 'Registrati con Google'}</button></form>${mode === 'login' ? '<button id="googleLoginBtn" class="secondary">Accedi con Google</button>' : ''}<p id="authMsg" class="error">${esc(state.authMessage)}</p></article></section>`);
   document.getElementById('showLogin').onclick = () => renderAuth('login');
   document.getElementById('showRegister').onclick = () => renderAuth('register');
-  document.getElementById('googleLoginBtn')?.addEventListener('click', () => safe(loginWithGoogle, 'authMsg'));
+  document.getElementById('googleLoginBtn')?.addEventListener('click', () => safe(async () => { const profile = await loginWithGoogle(); if (profile && !isEnabled(profile)) { state.profile = profile; state.authMessage = PENDING_GOOGLE_MESSAGE; render(); } }, 'authMsg'));
   document.getElementById('authForm').onsubmit = (e) => safe(async () => { e.preventDefault(); const d = Object.fromEntries(new FormData(e.target)); mode === 'login' ? await login(d.email, d.password) : await registerWithGoogle(d); }, 'authMsg');
 }
-function renderWaiting() { shell(html`<section class="card stack waiting-card"><h2>Account non abilitato</h2><p class="muted">Solo un admin può abilitarlo impostando stato=abilitato. Se resta in_attesa, non puoi accedere ai dati aziendali.</p><button id="logoutBtn" class="secondary">Esci</button></section>`); bindLogout(); }
+function renderWaiting() { shell(html`<section class="card stack waiting-card"><h2>Account non abilitato</h2><p class="success">${esc(state.authMessage || PENDING_GOOGLE_MESSAGE)}</p><p class="muted">Solo un admin può abilitarlo impostando <code>enabled=true</code> (oppure <code>stato=abilitato</code>). Se resta in attesa, non puoi accedere ai dati aziendali.</p><button id="logoutBtn" class="secondary">Esci</button></section>`); bindLogout(); }
 
 function renderAdmin() { shell(header('Dashboard Admin', 'Vede solo la propria azienda e abilita o blocca tecnici e operatori in attesa.') + adminModules(false) + percorsiModule()); bindLogout(); bindAdmin(); bindRoutes(); }
 function renderTechnician() { shell(header('Dashboard Tecnico', 'Crea e modifica percorsi, assegna operatori e vede solo i propri percorsi.') + percorsiModule(true)); bindLogout(); bindRoutes(); }
@@ -102,7 +112,7 @@ function routeItem(r, operator) { return html`<div class="item stack"><strong>${
 function bindAdmin() { document.getElementById('companyForm')?.addEventListener('submit', e=>safe(()=>saveCompany(e))); document.getElementById('userForm')?.addEventListener('submit', e=>safe(()=>saveUser(e))); }
 function bindRoutes() { document.getElementById('newRouteBtn')?.addEventListener('click',()=>document.getElementById('routeForm').classList.toggle('hidden')); document.getElementById('routeForm')?.addEventListener('submit', e=>safe(()=>saveRoute(e))); document.querySelectorAll('.start-route').forEach(b=>b.onclick=()=>startRoute(b.dataset.id)); }
 async function saveCompany(e){ e.preventDefault(); const d=Object.fromEntries(new FormData(e.target)); const id=crypto.randomUUID(); await setDocCompat(['aziende',id],{nome:d.nome,createdAt:now(),updatedAt:now()}); await refresh('Azienda creata.'); }
-async function saveUser(e){ e.preventDefault(); const d=Object.fromEntries(new FormData(e.target)); const payload={uid:d.uid,nome:d.nome,email:d.email,ruolo:d.ruolo,aziendaId:companyId(),tecnicoId:d.tecnicoId||'',stato:d.stato||'in_attesa',createdAt:now()}; await setDocCompat(['users',d.uid],payload,true); await refresh('Utente salvato.'); }
+async function saveUser(e){ e.preventDefault(); const d=Object.fromEntries(new FormData(e.target)); const enabled=d.stato==='abilitato'; const payload={uid:d.uid,nome:d.nome,displayName:d.nome,email:d.email,ruolo:d.ruolo,role:d.ruolo,aziendaId:companyId(),tecnicoId:d.tecnicoId||'',stato:d.stato||'in_attesa',enabled,createdAt:now()}; await setDocCompat(['users',d.uid],payload,true); await refresh('Utente salvato.'); }
 async function saveRoute(e){ e.preventDefault(); const d=Object.fromEntries(new FormData(e.target)); const assigned=[...e.target.elements.assignedOperators.selectedOptions].map(o=>o.value); const id=crypto.randomUUID(); await setDocCompat(['aziende',companyId(),'percorsi',id],{id,aziendaId:companyId(),tecnicoId:uid(),nome:d.nome,descrizione:d.descrizione,stato:'bozza',createdAt:now()}); await refresh('Percorso salvato.'); }
 function startRoute(id){ const route=state.percorsi.find(r=>r.id===id); state.activeRoute=route; state.serviceId=crypto.randomUUID(); state.gpsPoints=[]; if(!navigator.geolocation) return alert('GPS non disponibile.'); navigator.geolocation.watchPosition(pos=>{ const point={lat:pos.coords.latitude,lng:pos.coords.longitude,accuracy:pos.coords.accuracy,recordedAt:new Date().toISOString()}; state.gpsPoints.push(point); saveServicePoint(route, point); }, err=>alert(err.message), {enableHighAccuracy:true, maximumAge:5000, timeout:15000}); alert('Turno iniziato. La PWA continua a registrare finché il browser consente il GPS in background/schermo spento.'); }
 async function saveServicePoint(route, point){ await setDocCompat(['aziende',route.aziendaId,'percorsi',route.id,'serviceSessions',state.serviceId],{routeId:route.id,aziendaId:route.aziendaId,tecnicoId:route.tecnicoId,operatoreId:uid(),status:'in_corso',gpsTrack:isFirebaseConfigured ? arrayUnion(point) : [point],updatedAt:now()},true); }

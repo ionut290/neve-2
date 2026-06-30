@@ -1,4 +1,4 @@
-import {createUserWithEmailAndPassword, GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signOut, User} from 'firebase/auth';
+import {createUserWithEmailAndPassword, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signInWithEmailAndPassword, signInWithPopup, signInWithRedirect, signOut, User} from 'firebase/auth';
 import {doc, getDoc, serverTimestamp as firestoreServerTimestamp, setDoc} from 'firebase/firestore';
 import {getFirebaseAuth, getFirebaseDb} from '../firebase/config';
 import {operatoreRef, userRef} from '../firebase/collections';
@@ -25,13 +25,48 @@ export function mapAuthError(error: unknown): string {
 export async function getUserProfile(uid: string): Promise<Utente> {
   const snapshot = await getDoc(userRef(uid));
   if (!snapshot.exists()) throw new Error('Profilo utente non trovato. Contatta un admin.');
-  return snapshot.data() as Utente;
+  return normalizeProfile(snapshot.data() as Utente);
+}
+
+export const PENDING_GOOGLE_MESSAGE = 'Registrazione ricevuta. Attendi abilitazione da un amministratore.';
+
+function normalizeProfile(profile: Utente): Utente {
+  return {
+    ...profile,
+    role: profile.role || profile.ruolo,
+    ruolo: profile.ruolo || profile.role || 'pending',
+    enabled: profile.enabled ?? profile.stato === 'abilitato',
+    stato: profile.stato || (profile.enabled ? 'abilitato' : 'in_attesa'),
+    nome: profile.nome || profile.displayName || profile.email,
+  };
 }
 
 function ensureEnabled(user: Utente): Utente {
-  if (user.stato === 'in_attesa') throw new Error('Registrazione ricevuta: il tuo account è in attesa di abilitazione da parte di un admin.');
+  if (user.enabled === false || user.stato === 'in_attesa' || user.role === 'pending') throw new Error(PENDING_GOOGLE_MESSAGE);
   if (user.stato === 'bloccato') throw new Error('Account bloccato. Contatta un admin della tua azienda.');
   return user;
+}
+
+async function ensureGoogleUserProfile(user: User): Promise<Utente> {
+  const snapshot = await getDoc(userRef(user.uid));
+  if (snapshot.exists()) return normalizeProfile(snapshot.data() as Utente);
+
+  const email = user.email ?? '';
+  const profile: Utente = {
+    uid: user.uid,
+    nome: user.displayName || email,
+    displayName: user.displayName || '',
+    photoURL: user.photoURL || '',
+    email,
+    ruolo: 'pending',
+    role: 'pending',
+    aziendaId: '',
+    stato: 'in_attesa',
+    enabled: false,
+    createdAt: firestoreServerTimestamp() as Utente['createdAt'],
+  };
+  await setDoc(userRef(user.uid), profile);
+  return profile;
 }
 
 export async function login(email: string, password: string): Promise<Utente> {
@@ -39,9 +74,21 @@ export async function login(email: string, password: string): Promise<Utente> {
   return ensureEnabled(await getUserProfile(credential.user.uid));
 }
 
-export async function loginWithGoogle(): Promise<Utente> {
-  const credential = await signInWithPopup(getFirebaseAuth(), new GoogleAuthProvider());
-  return ensureEnabled(await getUserProfile(credential.user.uid));
+export async function loginWithGoogle(): Promise<Utente | null> {
+  const provider = new GoogleAuthProvider();
+  if (/Android|iPhone|iPad|iPod|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+    await signInWithRedirect(getFirebaseAuth(), provider);
+    return null;
+  }
+
+  const credential = await signInWithPopup(getFirebaseAuth(), provider);
+  return ensureEnabled(await ensureGoogleUserProfile(credential.user));
+}
+
+export async function handleGoogleRedirectResult(): Promise<Utente | null> {
+  const credential = await getRedirectResult(getFirebaseAuth());
+  if (!credential?.user) return null;
+  return ensureEnabled(await ensureGoogleUserProfile(credential.user));
 }
 
 export async function register(input: RegisterInput): Promise<Utente> {
@@ -51,6 +98,8 @@ export async function register(input: RegisterInput): Promise<Utente> {
     nome: input.nome,
     email: input.email,
     ruolo: input.ruolo,
+    role: input.ruolo,
+    enabled: false,
     aziendaId: input.aziendaId,
     tecnicoId: input.tecnicoId || undefined,
     stato: 'in_attesa',
@@ -77,6 +126,8 @@ export async function registerWithGoogle(input: Omit<RegisterInput, 'email' | 'p
     nome,
     email,
     ruolo: input.ruolo,
+    role: input.ruolo,
+    enabled: false,
     aziendaId: input.aziendaId,
     tecnicoId: input.tecnicoId || undefined,
     stato: 'in_attesa',
@@ -107,7 +158,7 @@ export function subscribeToAuth(callback: (user?: Utente, authUser?: User) => vo
 }
 
 export async function aggiornaStatoUtente(uid: string, stato: Utente['stato']) {
-  await setDoc(userRef(uid), {stato}, {merge: true});
+  await setDoc(userRef(uid), {stato, enabled: stato === 'abilitato'}, {merge: true});
 }
 
 export async function collegaOperatoreATecnico(params: {operatoreId: string; aziendaId: string; tecnicoId: string}): Promise<void> {

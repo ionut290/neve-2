@@ -1,6 +1,6 @@
 import {Timestamp as FirestoreTimestamp} from 'firebase/firestore';
 
-export type UserRole = 'admin' | 'tecnico' | 'operatore';
+export type UserRole = 'admin' | 'tecnico' | 'operatore' | 'pending';
 export type UserStatus = 'in_attesa' | 'abilitato' | 'bloccato';
 export type Timestamp = FirestoreTimestamp | Date;
 
@@ -12,8 +12,12 @@ export interface Azienda {
 export interface Utente {
   uid: string;
   nome: string;
+  displayName?: string;
+  photoURL?: string;
   email: string;
   ruolo: UserRole;
+  role?: UserRole;
+  enabled?: boolean;
   aziendaId: string;
   tecnicoId?: string;
   stato: UserStatus;
