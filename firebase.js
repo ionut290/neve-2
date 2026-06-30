@@ -40,12 +40,13 @@ import {
 // Sostituisci questi valori con la configurazione del tuo progetto Firebase.
 // Configura Firebase prima di usare autenticazione Google reale.
 export const firebaseConfig = {
-  apiKey: 'INSERISCI_API_KEY',
-  authDomain: 'INSERISCI_AUTH_DOMAIN',
-  projectId: 'INSERISCI_PROJECT_ID',
-  storageBucket: 'INSERISCI_STORAGE_BUCKET',
-  messagingSenderId: 'INSERISCI_MESSAGING_SENDER_ID',
-  appId: 'INSERISCI_APP_ID',
+  apiKey: 'AIzaSyAc6AMIeV9Av8HxbJbfjmZ8JSRJO7t-MG0',
+  authDomain: 'servizo-neve.firebaseapp.com',
+  projectId: 'servizo-neve',
+  storageBucket: 'servizo-neve.firebasestorage.app',
+  messagingSenderId: '634078508990',
+  appId: '1:634078508990:web:4071557a0dc626c1f02bef',
+  measurementId: 'G-MVZ9MH8PXB',
 };
 
 export const isFirebaseConfigured = Object.values(firebaseConfig).every((value) => value && !value.startsWith('INSERISCI_'));
