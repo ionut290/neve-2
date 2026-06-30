@@ -12,7 +12,7 @@ import {
   updateProfile,
 } from './firebase.js';
 
-export const ROLES = ['admin', 'tecnico', 'operatore'];
+export const ROLES = ['super_admin', 'azienda_admin', 'tecnico', 'operatore'];
 export const DIRECT_ADMIN_EMAILS = ['ionut29019@gmail.com'];
 
 export function isDirectAdminEmail(email) {
@@ -48,7 +48,7 @@ export async function register({ email, password, nome }) {
     uid: user.uid,
     nome: String(nome || '').trim(),
     email: normalizedEmail,
-    ruolo: directAdmin ? 'admin' : 'operatore',
+    ruolo: directAdmin ? 'super_admin' : 'operatore',
     aziendaId: '',
     tecnicoId: '',
     abilitato: directAdmin,
@@ -86,7 +86,7 @@ function applyDirectAdminAccess(profile) {
   if (!isDirectAdminEmail(profile.email)) return profile;
   return {
     ...profile,
-    ruolo: 'admin',
+    ruolo: 'super_admin',
     abilitato: true,
   };
 }

@@ -6,7 +6,9 @@ service cloud.firestore {
     function enabled() { return signedIn() && profile().abilitato == true; }
     function role() { return profile().ruolo; }
     function isDirectAdminEmail() { return signedIn() && request.auth.token.email == 'ionut29019@gmail.com'; }
-    function isAdmin() { return (enabled() && role() == 'admin') || isDirectAdminEmail(); }
+    function isSuperAdmin() { return (enabled() && (role() == 'super_admin' || role() == 'admin')) || isDirectAdminEmail(); }
+    function isCompanyAdmin() { return enabled() && role() == 'azienda_admin'; }
+    function isAdmin() { return isSuperAdmin() || isCompanyAdmin(); }
     function isTechnician() { return enabled() && role() == 'tecnico'; }
     function isOperator() { return enabled() && role() == 'operatore'; }
     function sameCompany() { return isDirectAdminEmail() || (enabled() && resource.data.aziendaId == profile().aziendaId); }
@@ -27,13 +29,14 @@ service cloud.firestore {
         && request.resource.data.email == request.auth.token.email
         && (
           (request.resource.data.ruolo == 'operatore' && request.resource.data.abilitato == false)
-          || (isDirectAdminEmail() && request.resource.data.ruolo == 'admin' && request.resource.data.abilitato == true)
+          || (isDirectAdminEmail() && (request.resource.data.ruolo == 'super_admin' || request.resource.data.ruolo == 'admin') && request.resource.data.abilitato == true)
         );
-      allow update: if isAdmin() || (uid == request.auth.uid && isDirectAdminEmail());
+      allow update: if isSuperAdmin() || (isCompanyAdmin() && resource.data.aziendaId == profile().aziendaId) || (uid == request.auth.uid && isDirectAdminEmail());
     }
 
     match /aziende/{aziendaId} {
-      allow read, write: if isAdmin();
+      allow read: if isSuperAdmin() || (isCompanyAdmin() && aziendaId == profile().aziendaId);
+      allow create, update, delete: if isSuperAdmin();
     }
 
     match /percorsi/{percorsoId} {
