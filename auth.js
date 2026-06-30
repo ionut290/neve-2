@@ -100,8 +100,7 @@ export async function logout() {
 
 export async function getUserProfile(uid) {
   if (isFirebaseConfigured) {
-    let snapshot = await getDoc(doc(db, 'users', uid));
-    if (!snapshot.exists()) snapshot = await getDoc(doc(db, 'utenti', uid));
+    const snapshot = await getDoc(doc(db, 'users', uid));
     if (!snapshot.exists()) return null;
     return snapshot.data();
   }
