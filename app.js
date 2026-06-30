@@ -188,22 +188,10 @@ function renderAuth(mode = 'login') {
       <article class="card stack">
         <h2>${mode === 'login' ? 'Login' : 'Registrazione'}</h2>
         <p class="muted">Ogni utente accede con email e password. Dopo la registrazione l’account resta disabilitato finché un admin lo abilita.</p>
-        <div class="tabs">
-          <button id="showLogin" class="${mode === 'login' ? '' : 'secondary'}">Login</button>
-          <button id="showRegister" class="${mode === 'register' ? '' : 'secondary'}">Registrazione</button>
-        </div>
+        <div class="tabs"><button id="showLogin" class="${mode === 'login' ? '' : 'secondary'}">Login</button><button id="showRegister" class="${mode === 'register' ? '' : 'secondary'}">Registrazione</button></div>
       </article>
-      <article class="card stack">
-        <form id="authForm" class="stack">
-          ${mode === 'register' ? '<label>Nome e cognome<input name="nome" autocomplete="name" required></label>' : ''}
-          <label>Email<input name="email" type="email" autocomplete="email" required></label>
-          <label>Password<input name="password" type="password" autocomplete="current-password" minlength="6" required></label>
-          <button>${mode === 'login' ? 'Accedi' : 'Registrati'}</button>
-        </form>
-        <p id="authMessage" class="error" role="alert"></p>
-      </article>
+      <article class="card stack"><form id="authForm" class="stack">${mode === 'register' ? '<label>Nome e cognome<input name="nome" autocomplete="name" required></label>' : ''}<label>Email<input name="email" type="email" autocomplete="email" required></label><label>Password<input name="password" type="password" autocomplete="current-password" minlength="6" required></label><button>${mode === 'login' ? 'Accedi' : 'Registrati'}</button></form><p id="authMessage" class="error" role="alert"></p></article>
     </section>`, 'Accedi o crea un account operatore in attesa di abilitazione.');
-
   document.getElementById('showLogin').onclick = () => renderAuth('login');
   document.getElementById('showRegister').onclick = () => renderAuth('register');
   document.getElementById('authForm').onsubmit = async (event) => {
