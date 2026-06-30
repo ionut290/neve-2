@@ -2,79 +2,90 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
-    function profile() { return get(/databases/$(database)/documents/utenti/$(request.auth.uid)).data; }
-    function enabled() { return signedIn() && profile().abilitato == true; }
+    function userPath(uid) { return /databases/$(database)/documents/users/$(uid); }
+    function profile() { return get(userPath(request.auth.uid)).data; }
+    function enabled() { return signedIn() && profile().enabled == true; }
     function role() { return profile().ruolo; }
-    function isDirectAdminEmail() { return signedIn() && request.auth.token.email == 'ionut29019@gmail.com'; }
-    function isSuperAdmin() { return (enabled() && (role() == 'super_admin' || role() == 'admin')) || isDirectAdminEmail(); }
+    function companyId() { return profile().companyId; }
+    function technicianId() { return profile().tecnicoId; }
+    function isSuperAdmin() { return enabled() && role() == 'super_admin'; }
     function isCompanyAdmin() { return enabled() && role() == 'azienda_admin'; }
-    function isAdmin() { return isSuperAdmin() || isCompanyAdmin(); }
     function isTechnician() { return enabled() && role() == 'tecnico'; }
     function isOperator() { return enabled() && role() == 'operatore'; }
-    function sameCompany() { return isDirectAdminEmail() || (enabled() && resource.data.aziendaId == profile().aziendaId); }
-    function incomingSameCompany() { return isDirectAdminEmail() || (enabled() && request.resource.data.aziendaId == profile().aziendaId); }
-    function ownTechnicianData() { return isTechnician() && resource.data.tecnicoId == request.auth.uid; }
-    function ownOperatorData() { return isOperator() && resource.data.operatoreId == request.auth.uid; }
-    function assignedOperatorRoute() {
-      return isOperator()
-        && request.auth.uid in resource.data.operatoriAssegnati
-        && resource.data.tecnicoId == profile().tecnicoId;
+    function sameCompany(cid) { return enabled() && companyId() == cid; }
+    function validUserBase() {
+      return request.resource.data.keys().hasOnly(['uid', 'nome', 'email', 'ruolo', 'companyId', 'tecnicoId', 'enabled', 'createdAt', 'updatedAt'])
+        && request.resource.data.uid is string
+        && request.resource.data.nome is string
+        && request.resource.data.email is string
+        && request.resource.data.ruolo in ['super_admin', 'azienda_admin', 'tecnico', 'operatore']
+        && request.resource.data.enabled is bool;
+    }
+    function validRouteBase(cid) {
+      return request.resource.data.companyId == cid
+        && request.resource.data.keys().hasOnly(['id', 'companyId', 'tecnicoId', 'nome', 'zona', 'descrizione', 'puntiGps', 'assignedOperators', 'createdAt', 'updatedAt'])
+        && request.resource.data.tecnicoId is string
+        && request.resource.data.nome is string
+        && request.resource.data.assignedOperators is list;
     }
 
-    match /utenti/{uid} {
-      allow read: if signedIn() && (uid == request.auth.uid || isAdmin() || ownTechnicianData());
-      allow create: if signedIn()
-        && uid == request.auth.uid
-        && request.resource.data.uid == request.auth.uid
+    match /users/{userId} {
+      allow read: if signedIn() && (
+        userId == request.auth.uid
+        || isSuperAdmin()
+        || (isCompanyAdmin() && resource.data.companyId == companyId())
+        || (isTechnician() && resource.data.companyId == companyId() && (resource.data.uid == request.auth.uid || resource.data.tecnicoId == request.auth.uid))
+      );
+      allow create: if signedIn() && userId == request.auth.uid && validUserBase()
         && request.resource.data.email == request.auth.token.email
-        && (
-          (request.resource.data.ruolo == 'operatore' && request.resource.data.abilitato == false)
-          || (isDirectAdminEmail() && (request.resource.data.ruolo == 'super_admin' || request.resource.data.ruolo == 'admin') && request.resource.data.abilitato == true)
-        );
-      allow update: if isSuperAdmin() || (isCompanyAdmin() && resource.data.aziendaId == profile().aziendaId) || (uid == request.auth.uid && isDirectAdminEmail());
+        && request.resource.data.ruolo == 'operatore'
+        && request.resource.data.enabled == false;
+      allow create, update: if isSuperAdmin() && validUserBase() && request.resource.data.ruolo in ['azienda_admin', 'tecnico', 'operatore'];
+      allow update: if isCompanyAdmin()
+        && resource.data.companyId == companyId()
+        && request.resource.data.companyId == companyId()
+        && validUserBase()
+        && request.resource.data.ruolo in ['tecnico', 'operatore'];
+      allow delete: if isSuperAdmin();
     }
 
-    match /aziende/{aziendaId} {
-      allow read: if isSuperAdmin() || (isCompanyAdmin() && aziendaId == profile().aziendaId);
+    match /companies/{cid} {
+      allow read: if isSuperAdmin() || sameCompany(cid);
       allow create, update, delete: if isSuperAdmin();
+
+      match /routes/{routeId} {
+        allow read: if isSuperAdmin()
+          || (sameCompany(cid) && (
+            isCompanyAdmin()
+            || (isTechnician() && resource.data.tecnicoId == request.auth.uid)
+            || (isOperator() && request.auth.uid in resource.data.assignedOperators)
+          ));
+        allow create: if sameCompany(cid)
+          && validRouteBase(cid)
+          && (isCompanyAdmin() || (isTechnician() && request.resource.data.tecnicoId == request.auth.uid));
+        allow update: if sameCompany(cid)
+          && validRouteBase(cid)
+          && (isCompanyAdmin() || (isTechnician() && resource.data.tecnicoId == request.auth.uid && request.resource.data.tecnicoId == request.auth.uid));
+        allow delete: if sameCompany(cid) && (isCompanyAdmin() || (isTechnician() && resource.data.tecnicoId == request.auth.uid));
+
+        match /serviceSessions/{sessionId} {
+          allow read: if isSuperAdmin()
+            || (sameCompany(cid) && (
+              isCompanyAdmin()
+              || (isTechnician() && resource.data.tecnicoId == request.auth.uid)
+              || (isOperator() && resource.data.operatoreId == request.auth.uid)
+            ));
+          allow create, update: if sameCompany(cid)
+            && request.resource.data.companyId == cid
+            && request.resource.data.operatoreId == request.auth.uid
+            && isOperator()
+            && request.auth.uid in get(/databases/$(database)/documents/companies/$(cid)/routes/$(routeId)).data.assignedOperators;
+        }
+      }
     }
 
-
-    match /progettiNeve/{progettoId} {
-      allow read: if isSuperAdmin()
-        || (isCompanyAdmin() && resource.data.aziendaId == profile().aziendaId)
-        || (isTechnician() && resource.data.tecnicoId == request.auth.uid);
-      allow create: if isSuperAdmin()
-        || (isCompanyAdmin() && request.resource.data.aziendaId == profile().aziendaId)
-        || (isTechnician() && request.resource.data.tecnicoId == request.auth.uid && request.resource.data.aziendaId == profile().aziendaId);
-      allow update: if isSuperAdmin()
-        || (isCompanyAdmin() && resource.data.aziendaId == profile().aziendaId && request.resource.data.aziendaId == profile().aziendaId)
-        || (isTechnician() && resource.data.tecnicoId == request.auth.uid && request.resource.data.tecnicoId == request.auth.uid);
-      allow delete: if isSuperAdmin()
-        || (isCompanyAdmin() && resource.data.aziendaId == profile().aziendaId)
-        || (isTechnician() && resource.data.tecnicoId == request.auth.uid);
-    }
-
-    match /percorsi/{percorsoId} {
-      allow read: if sameCompany() && (isAdmin() || ownTechnicianData() || assignedOperatorRoute());
-      allow create: if incomingSameCompany() && (isAdmin() || (isTechnician() && request.resource.data.tecnicoId == request.auth.uid));
-      allow update, delete: if sameCompany() && (isAdmin() || (isTechnician() && resource.data.tecnicoId == request.auth.uid));
-    }
-
-    match /tracceGPS/{tracciaId} {
-      allow read: if sameCompany() && (isAdmin() || ownTechnicianData() || ownOperatorData());
-      allow create, update: if incomingSameCompany()
-        && (isAdmin()
-          || (isTechnician() && request.resource.data.tecnicoId == request.auth.uid)
-          || (isOperator() && request.resource.data.operatoreId == request.auth.uid && request.resource.data.tecnicoId == profile().tecnicoId));
-    }
-
-    match /fotoServizio/{fotoId} {
-      allow read: if sameCompany() && (isAdmin() || ownTechnicianData() || ownOperatorData());
-      allow create, update: if incomingSameCompany()
-        && (isAdmin()
-          || (isTechnician() && request.resource.data.tecnicoId == request.auth.uid)
-          || (isOperator() && request.resource.data.operatoreId == request.auth.uid && request.resource.data.tecnicoId == profile().tecnicoId));
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
