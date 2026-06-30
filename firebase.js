@@ -6,7 +6,9 @@ import {
   onAuthStateChanged as firebaseOnAuthStateChanged,
   signInWithEmailAndPassword as firebaseSignInWithEmailAndPassword,
   signOut as firebaseSignOut,
+  getRedirectResult as firebaseGetRedirectResult,
   signInWithPopup as firebaseSignInWithPopup,
+  signInWithRedirect as firebaseSignInWithRedirect,
   updateProfile as firebaseUpdateProfile,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
@@ -79,10 +81,23 @@ export async function createUserWithEmailAndPassword(authInstance, email, passwo
 
 export async function signInWithPopup(authInstance, provider) {
   if (!isFirebaseConfigured) {
-    throw new Error('Configurazione Firebase richiesta per Accedi con Google reale.');
+    throw new Error('Configurazione Firebase incompleta: verifica firebaseConfig prima di usare Accedi con Google.');
   }
 
   return firebaseSignInWithPopup(authInstance, provider);
+}
+
+export async function signInWithRedirect(authInstance, provider) {
+  if (!isFirebaseConfigured) {
+    throw new Error('Configurazione Firebase incompleta: verifica firebaseConfig prima di usare Accedi con Google.');
+  }
+
+  return firebaseSignInWithRedirect(authInstance, provider);
+}
+
+export async function getRedirectResult(authInstance) {
+  if (!isFirebaseConfigured) return null;
+  return firebaseGetRedirectResult(authInstance);
 }
 
 export async function signInWithEmailAndPassword(authInstance, email, password) {
