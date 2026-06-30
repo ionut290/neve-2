@@ -6,7 +6,9 @@ import {
   onAuthStateChanged as firebaseOnAuthStateChanged,
   signInWithEmailAndPassword as firebaseSignInWithEmailAndPassword,
   signOut as firebaseSignOut,
+  getRedirectResult as firebaseGetRedirectResult,
   signInWithPopup as firebaseSignInWithPopup,
+  signInWithRedirect as firebaseSignInWithRedirect,
   updateProfile as firebaseUpdateProfile,
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
 import {
@@ -38,12 +40,13 @@ import {
 // Sostituisci questi valori con la configurazione del tuo progetto Firebase.
 // Configura Firebase prima di usare autenticazione Google reale.
 export const firebaseConfig = {
-  apiKey: 'INSERISCI_API_KEY',
-  authDomain: 'INSERISCI_AUTH_DOMAIN',
-  projectId: 'INSERISCI_PROJECT_ID',
-  storageBucket: 'INSERISCI_STORAGE_BUCKET',
-  messagingSenderId: 'INSERISCI_MESSAGING_SENDER_ID',
-  appId: 'INSERISCI_APP_ID',
+  apiKey: 'AIzaSyAc6AMIeV9Av8HxbJbfjmZ8JSRJO7t-MG0',
+  authDomain: 'servizo-neve.firebaseapp.com',
+  projectId: 'servizo-neve',
+  storageBucket: 'servizo-neve.firebasestorage.app',
+  messagingSenderId: '634078508990',
+  appId: '1:634078508990:web:4071557a0dc626c1f02bef',
+  measurementId: 'G-MVZ9MH8PXB',
 };
 
 export const isFirebaseConfigured = Object.values(firebaseConfig).every((value) => value && !value.startsWith('INSERISCI_'));
@@ -79,10 +82,23 @@ export async function createUserWithEmailAndPassword(authInstance, email, passwo
 
 export async function signInWithPopup(authInstance, provider) {
   if (!isFirebaseConfigured) {
-    throw new Error('Configurazione Firebase richiesta per Accedi con Google reale.');
+    throw new Error('Configurazione Firebase incompleta: verifica firebaseConfig prima di usare Accedi con Google.');
   }
 
   return firebaseSignInWithPopup(authInstance, provider);
+}
+
+export async function signInWithRedirect(authInstance, provider) {
+  if (!isFirebaseConfigured) {
+    throw new Error('Configurazione Firebase incompleta: verifica firebaseConfig prima di usare Accedi con Google.');
+  }
+
+  return firebaseSignInWithRedirect(authInstance, provider);
+}
+
+export async function getRedirectResult(authInstance) {
+  if (!isFirebaseConfigured) return null;
+  return firebaseGetRedirectResult(authInstance);
 }
 
 export async function signInWithEmailAndPassword(authInstance, email, password) {

@@ -16,7 +16,7 @@ export function LoginScreen({onShowRegister}: {onShowRegister: () => void}) {
     try {
       setError(undefined);
       const user = await loginWithGoogle();
-      setCurrentUser(user);
+      if (user) setCurrentUser(user);
     } catch (loginError) {
       setError(mapAuthError(loginError));
     }
