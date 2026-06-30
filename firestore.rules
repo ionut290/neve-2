@@ -3,59 +3,55 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
     function profile() { return get(/databases/$(database)/documents/utenti/$(request.auth.uid)).data; }
+    function enabled() { return signedIn() && profile().abilitato == true; }
     function role() { return profile().ruolo; }
-    function sameCompany() { return signedIn() && resource.data.aziendaId == profile().aziendaId; }
-    function incomingSameCompany() { return signedIn() && request.resource.data.aziendaId == profile().aziendaId; }
-    function isSuperAdmin() { return signedIn() && role() == 'super_admin'; }
-    function isCompanyAdmin() { return signedIn() && role() == 'azienda_admin'; }
-    function isTechnician() { return signedIn() && role() == 'tecnico'; }
-    function isOperator() { return signedIn() && role() == 'operatore'; }
-    function ownTechnicianData() { return isTechnician() && resource.data.tecnicoId == profile().tecnicoId; }
-    function ownOperatorData() { return isOperator() && resource.data.operatoreId == profile().operatoreId; }
-    function assignedOperatorProject() {
+    function isAdmin() { return enabled() && role() == 'admin'; }
+    function isTechnician() { return enabled() && role() == 'tecnico'; }
+    function isOperator() { return enabled() && role() == 'operatore'; }
+    function sameCompany() { return enabled() && resource.data.aziendaId == profile().aziendaId; }
+    function incomingSameCompany() { return enabled() && request.resource.data.aziendaId == profile().aziendaId; }
+    function ownTechnicianData() { return isTechnician() && resource.data.tecnicoId == request.auth.uid; }
+    function ownOperatorData() { return isOperator() && resource.data.operatoreId == request.auth.uid; }
+    function assignedOperatorRoute() {
       return isOperator()
-        && profile().operatoreId in resource.data.operatoreIds
+        && request.auth.uid in resource.data.operatoriAssegnati
         && resource.data.tecnicoId == profile().tecnicoId;
     }
 
     match /utenti/{uid} {
-      allow read: if signedIn() && (uid == request.auth.uid || isSuperAdmin() || (isCompanyAdmin() && sameCompany()) || ownTechnicianData());
-      allow create, update: if isSuperAdmin() || (isCompanyAdmin() && incomingSameCompany());
+      allow read: if signedIn() && (uid == request.auth.uid || isAdmin() || ownTechnicianData());
+      allow create: if signedIn()
+        && uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.ruolo == 'operatore'
+        && request.resource.data.abilitato == false;
+      allow update: if isAdmin();
     }
 
     match /aziende/{aziendaId} {
-      allow read, write: if isSuperAdmin() || (signedIn() && profile().aziendaId == aziendaId && isCompanyAdmin());
+      allow read, write: if isAdmin();
     }
 
-    match /tecnici/{tecnicoId} {
-      allow read: if sameCompany() && (isSuperAdmin() || isCompanyAdmin() || resource.data.tecnicoId == profile().tecnicoId || isOperator());
-      allow write: if isSuperAdmin() || (isCompanyAdmin() && incomingSameCompany());
+    match /percorsi/{percorsoId} {
+      allow read: if sameCompany() && (isAdmin() || ownTechnicianData() || assignedOperatorRoute());
+      allow create, update, delete: if incomingSameCompany() && (isAdmin() || (isTechnician() && request.resource.data.tecnicoId == request.auth.uid));
     }
 
-    match /operatori/{operatoreId} {
-      allow read: if sameCompany() && (isCompanyAdmin() || ownTechnicianData() || ownOperatorData());
-      allow update: if sameCompany() && (isCompanyAdmin() || ownTechnicianData() || ownOperatorData());
-      allow create: if isCompanyAdmin() && incomingSameCompany();
+    match /tracceGPS/{tracciaId} {
+      allow read: if sameCompany() && (isAdmin() || ownTechnicianData() || ownOperatorData());
+      allow create, update: if incomingSameCompany()
+        && (isAdmin()
+          || (isTechnician() && request.resource.data.tecnicoId == request.auth.uid)
+          || (isOperator() && request.resource.data.operatoreId == request.auth.uid && request.resource.data.tecnicoId == profile().tecnicoId));
     }
 
-    match /{collection}/{docId} {
-      allow read: if collection in ['progettiNeve', 'percorsi'] && sameCompany() && (isCompanyAdmin() || ownTechnicianData() || assignedOperatorProject());
-      allow create, update, delete: if collection in ['progettiNeve', 'percorsi'] && incomingSameCompany() && (isCompanyAdmin() || (isTechnician() && request.resource.data.tecnicoId == profile().tecnicoId));
-    }
-
-    match /serviziNeve/{servizioId} {
-      allow read: if sameCompany() && (isCompanyAdmin() || ownTechnicianData() || ownOperatorData());
-      allow create, update: if incomingSameCompany() && (isCompanyAdmin() || (isTechnician() && request.resource.data.tecnicoId == profile().tecnicoId) || (isOperator() && request.resource.data.operatoreId == profile().operatoreId && request.resource.data.tecnicoId == profile().tecnicoId));
-    }
-
-    match /posizioniLive/{operatoreId} {
-      allow read: if sameCompany() && (isCompanyAdmin() || ownTechnicianData() || operatoreId == profile().operatoreId);
-      allow create, update: if incomingSameCompany() && isOperator() && operatoreId == profile().operatoreId && request.resource.data.tecnicoId == profile().tecnicoId;
-    }
-
-    match /{collection}/{docId} {
-      allow read: if collection in ['segnalazioni', 'mezzi'] && sameCompany() && (isCompanyAdmin() || ownTechnicianData() || ownOperatorData());
-      allow create, update: if collection in ['segnalazioni', 'mezzi'] && incomingSameCompany();
+    match /fotoServizio/{fotoId} {
+      allow read: if sameCompany() && (isAdmin() || ownTechnicianData() || ownOperatorData());
+      allow create, update: if incomingSameCompany()
+        && (isAdmin()
+          || (isTechnician() && request.resource.data.tecnicoId == request.auth.uid)
+          || (isOperator() && request.resource.data.operatoreId == request.auth.uid && request.resource.data.tecnicoId == profile().tecnicoId));
     }
   }
 }
