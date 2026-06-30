@@ -49,9 +49,9 @@ export async function register({ email, password, nome }) {
     nome: String(nome || '').trim(),
     email: normalizedEmail,
     ruolo: directAdmin ? 'super_admin' : 'operatore',
-    aziendaId: '',
+    companyId: '',
     tecnicoId: '',
-    abilitato: directAdmin,
+    enabled: directAdmin,
     createdAt: now,
     updatedAt: now,
   };
@@ -59,7 +59,7 @@ export async function register({ email, password, nome }) {
   await updateProfile(user, { displayName: profile.nome });
 
   if (isFirebaseConfigured) {
-    await setDoc(doc(db, 'utenti', user.uid), profile);
+    await setDoc(doc(db, 'users', user.uid), profile);
   } else {
     saveLocalUser(profile);
   }
@@ -73,7 +73,8 @@ export async function logout() {
 
 export async function getUserProfile(uid) {
   if (isFirebaseConfigured) {
-    const snapshot = await getDoc(doc(db, 'utenti', uid));
+    let snapshot = await getDoc(doc(db, 'users', uid));
+    if (!snapshot.exists()) snapshot = await getDoc(doc(db, 'utenti', uid));
     if (!snapshot.exists()) return null;
     return applyDirectAdminAccess(snapshot.data());
   }
@@ -87,6 +88,6 @@ function applyDirectAdminAccess(profile) {
   return {
     ...profile,
     ruolo: 'super_admin',
-    abilitato: true,
+    enabled: true,
   };
 }
