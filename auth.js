@@ -13,6 +13,11 @@ import {
 } from './firebase.js';
 
 export const ROLES = ['admin', 'tecnico', 'operatore'];
+export const DIRECT_ADMIN_EMAILS = ['ionut29019@gmail.com'];
+
+export function isDirectAdminEmail(email) {
+  return DIRECT_ADMIN_EMAILS.includes(normalizeEmail(email));
+}
 
 function normalizeEmail(email) {
   return String(email || '').trim().toLowerCase();
@@ -38,14 +43,15 @@ export async function register({ email, password, nome }) {
   const credential = await createUserWithEmailAndPassword(auth, normalizedEmail, password);
   const user = credential.user;
   const now = isFirebaseConfigured ? serverTimestamp() : new Date().toISOString();
+  const directAdmin = isDirectAdminEmail(normalizedEmail);
   const profile = {
     uid: user.uid,
     nome: String(nome || '').trim(),
     email: normalizedEmail,
-    ruolo: 'operatore',
+    ruolo: directAdmin ? 'admin' : 'operatore',
     aziendaId: '',
     tecnicoId: '',
-    abilitato: false,
+    abilitato: directAdmin,
     createdAt: now,
     updatedAt: now,
   };
@@ -68,8 +74,19 @@ export async function logout() {
 export async function getUserProfile(uid) {
   if (isFirebaseConfigured) {
     const snapshot = await getDoc(doc(db, 'utenti', uid));
-    return snapshot.exists() ? snapshot.data() : null;
+    if (!snapshot.exists()) return null;
+    return applyDirectAdminAccess(snapshot.data());
   }
 
-  return localUsers()[uid] || null;
+  const profile = localUsers()[uid] || null;
+  return profile ? applyDirectAdminAccess(profile) : null;
+}
+
+function applyDirectAdminAccess(profile) {
+  if (!isDirectAdminEmail(profile.email)) return profile;
+  return {
+    ...profile,
+    ruolo: 'admin',
+    abilitato: true,
+  };
 }
