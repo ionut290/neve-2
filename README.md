@@ -7,7 +7,7 @@ Servizio Neve è una WebApp/PWA mobile-first per una gestione multi-azienda di p
 - Shell PWA semplice e responsive.
 - Schermate di login e registrazione con email/password.
 - Collegamento a Firebase Authentication.
-- Creazione del documento `utenti/{uid}` dopo la registrazione con:
+- Creazione del documento `users/{uid}` dopo la registrazione con:
   - `ruolo: "operatore"`
   - `abilitato: false`
 - Schermata di attesa per gli account non abilitati.
@@ -23,19 +23,19 @@ Servizio Neve è una WebApp/PWA mobile-first per una gestione multi-azienda di p
 - `index.html`: shell PWA.
 - `style.css`: UI responsive mobile-first.
 - `app.js`: routing UI per login, registrazione, attesa abilitazione e dashboard per ruolo.
-- `firebase.js`: inizializzazione Firebase, Storage e fallback demo locale se i placeholder non sono configurati.
-- `auth.js`: login, registrazione e lettura profili da `utenti/{uid}`.
+- `firebase.js`: inizializzazione Firebase, Authentication Google reale, Firestore e Storage.
+- `auth.js`: login, registrazione e lettura profili da `users/{uid}`.
 - `firestore.rules`: regole di sicurezza base per `aziende`, `utenti`, `percorsi`, `tracceGPS` e `fotoServizio`.
 
 ## Configurazione Firebase
 
-Aggiorna `firebase.js` sostituendo i placeholder di `firebaseConfig` con i valori del tuo progetto Firebase. Se i valori non sono ancora configurati, l'app usa automaticamente un fallback locale con `localStorage` per consentire prove rapide dell'interfaccia.
+Aggiorna `firebase.js` sostituendo i placeholder di `firebaseConfig` con i valori del tuo progetto Firebase. L'accesso con Google richiede una configurazione Firebase valida e apre direttamente il selettore account di Google tramite Firebase Authentication, senza modalità demo locale.
 
 ## Modello dati previsto
 
 ```text
 aziende/{aziendaId}
-utenti/{uid}
+users/{uid}
 percorsi/{percorsoId}
 tracceGPS/{tracciaId}
 fotoServizio/{fotoId}

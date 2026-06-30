@@ -36,7 +36,7 @@ import {
 } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-storage.js';
 
 // Sostituisci questi valori con la configurazione del tuo progetto Firebase.
-// Se restano placeholder, la WebApp usa una modalità demo locale per evitare errori api-key.
+// Configura Firebase prima di usare autenticazione Google reale.
 export const firebaseConfig = {
   apiKey: 'INSERISCI_API_KEY',
   authDomain: 'INSERISCI_AUTH_DOMAIN',
@@ -52,7 +52,7 @@ export const app = isFirebaseConfigured ? initializeApp(firebaseConfig) : null;
 export const auth = isFirebaseConfigured ? getAuth(app) : null;
 export const db = isFirebaseConfigured ? getFirestore(app) : null;
 export const storage = isFirebaseConfigured ? getStorage(app) : null;
-export const googleProvider = isFirebaseConfigured ? new FirebaseGoogleAuthProvider() : { providerId: 'google.com' };
+export const googleProvider = new FirebaseGoogleAuthProvider();
 
 const localAuthListeners = new Set();
 const localCurrentUserKey = 'servizioNeve.currentUser';
@@ -78,15 +78,11 @@ export async function createUserWithEmailAndPassword(authInstance, email, passwo
 
 
 export async function signInWithPopup(authInstance, provider) {
-  if (isFirebaseConfigured) return firebaseSignInWithPopup(authInstance, provider);
-  const email = window.prompt('Email Google demo');
-  if (!email) throw new Error('Accesso Google annullato.');
-  const users = JSON.parse(localStorage.getItem('servizioNeve.users') || '{}');
-  const existing = Object.values(users).find((profile) => profile.email?.toLowerCase() === email.toLowerCase());
-  const user = existing || { uid: crypto.randomUUID(), email, displayName: email.split('@')[0], providerId: 'google.com' };
-  localStorage.setItem(localCurrentUserKey, JSON.stringify(user));
-  emitLocalAuth(user);
-  return { user };
+  if (!isFirebaseConfigured) {
+    throw new Error('Configurazione Firebase richiesta per Accedi con Google reale.');
+  }
+
+  return firebaseSignInWithPopup(authInstance, provider);
 }
 
 export async function signInWithEmailAndPassword(authInstance, email, password) {
