@@ -161,6 +161,15 @@ input, select {
   font-weight: 900;
   padding: 8px;
 }
+.status-pill {
+  background: #ccfbf1;
+  border: 1px solid #99f6e4;
+  border-radius: 999px;
+  color: #0f766e;
+  font-weight: 900;
+  padding: 8px 12px;
+  white-space: nowrap;
+}
 .topbar {
   align-items: center;
   display: flex;

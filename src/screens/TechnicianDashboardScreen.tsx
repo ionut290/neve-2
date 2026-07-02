@@ -1,5 +1,4 @@
 import {PrimaryButton} from '../components/PrimaryButton';
-import {logout} from '../services/authService';
 import {creaProgettoNeve} from '../services/projectService';
 import {useSessionStore} from '../store/sessionStore';
 
@@ -7,17 +6,12 @@ type Props = {onOpenMap: () => void};
 
 export function TechnicianDashboardScreen({onOpenMap}: Props) {
   const user = useSessionStore(state => state.currentUser);
-  const setCurrentUser = useSessionStore(state => state.setCurrentUser);
 
   async function creaDemo() {
     if (!user?.aziendaId || !user.tecnicoId) return;
     await creaProgettoNeve({aziendaId: user.aziendaId, tecnicoId: user.tecnicoId, nome: 'Nuovo progetto neve'});
   }
 
-  async function handleLogout() {
-    await logout();
-    setCurrentUser(undefined);
-  }
 
   return (
     <main className="app-shell">
@@ -26,7 +20,7 @@ export function TechnicianDashboardScreen({onOpenMap}: Props) {
           <p className="eyebrow">Tecnico</p>
           <h1>Dashboard Tecnico</h1>
         </div>
-        <button className="link-button" onClick={() => void handleLogout()} type="button">Esci</button>
+        <span className="status-pill">Accesso libero</span>
       </header>
 
       <section className="grid three-columns">
