@@ -1,13 +1,12 @@
 import {useEffect, useState} from 'react';
 import {PrimaryButton} from '../components/PrimaryButton';
-import {collegaOperatoreATecnico, logout} from '../services/authService';
+import {collegaOperatoreATecnico} from '../services/authService';
 import {useSessionStore} from '../store/sessionStore';
 
 type Props = {onOpenMap: () => void};
 
 export function OperatorDashboardScreen({onOpenMap}: Props) {
   const user = useSessionStore(state => state.currentUser);
-  const setCurrentUser = useSessionStore(state => state.setCurrentUser);
   const [tecnicoId, setTecnicoId] = useState('');
   const [status, setStatus] = useState('Percorsi assegnati sincronizzati da Firestore.');
 
@@ -17,10 +16,6 @@ export function OperatorDashboardScreen({onOpenMap}: Props) {
     setStatus('Operatore collegato al tecnico.');
   }
 
-  async function handleLogout() {
-    await logout();
-    setCurrentUser(undefined);
-  }
 
   useEffect(() => {
     setStatus('Vedi i percorsi assegnati e avvia il servizio quando sei sul mezzo.');
@@ -33,7 +28,7 @@ export function OperatorDashboardScreen({onOpenMap}: Props) {
           <p className="eyebrow">Operatore</p>
           <h1>Dashboard Operatore</h1>
         </div>
-        <button className="link-button" onClick={() => void handleLogout()} type="button">Esci</button>
+        <span className="status-pill">Accesso libero</span>
       </header>
 
       <section className="grid two-columns">

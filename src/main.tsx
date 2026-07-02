@@ -1,6 +1,7 @@
 import React from 'react';
 import {createRoot} from 'react-dom/client';
 import {App} from './App';
+import {AppErrorBoundary} from './components/AppErrorBoundary';
 import {registerServiceWorker} from './lib/pwa';
 import './styles.css';
 
@@ -12,7 +13,9 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
   <React.StrictMode>
-    <App />
+    <AppErrorBoundary>
+      <App />
+    </AppErrorBoundary>
   </React.StrictMode>,
 );
 
